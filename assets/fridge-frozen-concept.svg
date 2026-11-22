@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <style>:root { --line: #42677f; --fill: #dde4e9; }</style>
+  <g stroke="var(--line)" stroke-linecap="round" stroke-linejoin="round">
+    <g fill="var(--fill)" stroke-width="1.8">
+      <rect x="63" y="130" width="11" height="8" rx="4" /><rect x="106" y="130" width="11" height="8" rx="4" />
+      <rect x="53" y="38" width="74" height="96" rx="16" />
+    </g>
+    <path d="M53 80h74" fill="none" stroke-width="1.8" />
+    <g fill="none" stroke-width="1.5"><rect x="60" y="59" width="5" height="14" rx="2.5" /><rect x="60" y="87" width="5" height="14" rx="2.5" /></g>
+    <g fill="var(--line)" stroke="none"><circle cx="85" cy="61" r="1.8" /><circle cx="102" cy="61" r="1.8" /><circle cx="42" cy="35" r="1.4" /><circle cx="142" cy="71" r="1.4" /><circle cx="38" cy="119" r="1.4" /><circle cx="145" cy="132" r="1.4" /></g>
+    <g fill="none" stroke-width="1.4">
+      <g transform="translate(143 28)"><path d="M0-9V9M-8-4.5 8 4.5M-8 4.5 8-4.5M-3-6 0-4l3-2M-3 6 0 4l3 2M-7 0l3-2v-3M7 0 4 2v3M-7 0l3 2v3M7 0 4-2v-3" /></g>
+      <g transform="translate(30 68) scale(.89)"><path d="M0-9V9M-8-4.5 8 4.5M-8 4.5 8-4.5M-3-6 0-4l3-2M-3 6 0 4l3 2M-7 0l3-2v-3M7 0 4 2v3M-7 0l3 2v3M7 0 4-2v-3" /></g>
+      <g transform="translate(151 108) scale(.89)"><path d="M0-9V9M-8-4.5 8 4.5M-8 4.5 8-4.5M-3-6 0-4l3-2M-3 6 0 4l3 2M-7 0l3-2v-3M7 0 4 2v3M-7 0l3 2v3M7 0 4-2v-3" /></g>
+    </g>
+  </g>
+</svg>

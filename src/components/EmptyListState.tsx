@@ -1,41 +1,30 @@
 /**
  * @file
- * 빈 목록 문구와 터치로 문을 열고 닫을 수 있는 냉장고 캐릭터를 표시한다.
+ * 빈 목록 안내 문구와 냉장고 캐릭터를 표시한다.
  */
-import { useCallback, useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
-import { FeedbackPressable } from '@/components/FeedbackPressable';
-import { useTranslation } from '@/i18n/LanguageProvider';
 import { spacing, createThemedStyles } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/ThemeProvider';
+import type { StorageMode } from '@/features/fridge/model/fridgeLayout';
 
 const CHARACTER_SCALE = 0.9;
-const OPEN_DOOR_WIDTH = 44 * CHARACTER_SCALE;
 
 interface EmptyListStateProps {
   message: string;
   description: string;
+  storageMode?: StorageMode | null;
 }
 
-export function EmptyListState({ message, description }: EmptyListStateProps) {
-  const { mode, colors } = useAppTheme();
+export function EmptyListState({ message, description, storageMode }: EmptyListStateProps) {
+  const { mode, colors, fridgeDoorColors } = useAppTheme();
   const styles = getStyles(mode);
-  const { t } = useTranslation();
-  const [isOpen, setIsOpen] = useState(false);
-
-  // 화면이 뒤에 남아 있어도 다시 돌아올 때는 닫힌 상태로 시작한다.
-  useFocusEffect(useCallback(() => () => setIsOpen(false), []));
-
   return (
     <View style={styles.container}>
-      <FeedbackPressable feedback="none" accessibilityRole="button" accessibilityState={{ expanded: isOpen }}
-        accessibilityLabel={t(isOpen ? 'fridge.characterClose' : 'fridge.characterOpen')}
-        onPress={() => setIsOpen(open => !open)} style={[styles.characterContainer, isOpen && styles.openCharacter]}>
-        {isOpen ? (
-          <Image source={require('../../assets/fridge-character-open.svg')} style={styles.openImage} contentFit="fill"
-            svgVariables={{ '--fridge-line': colors.chilled, '--fridge-fill': colors.chilledBackground }}
+      <View style={[styles.characterContainer, storageMode && styles.conceptContainer]}>
+        {storageMode ? (
+          <Image source={storageMode === 'FROZEN' ? require('../../assets/fridge-frozen-concept.svg') : require('../../assets/fridge-chilled-concept.svg')}
+            style={styles.conceptImage} contentFit="contain" svgVariables={{ '--line': storageMode === 'FROZEN' ? colors.frozen : colors.chilled, '--fill': fridgeDoorColors[storageMode].background }}
             accessible={false} pointerEvents="none" />
         ) : (
           <View style={styles.character} pointerEvents="none">
@@ -47,21 +36,20 @@ export function EmptyListState({ message, description }: EmptyListStateProps) {
             </View>
           </View>
         )}
-      </FeedbackPressable>
+      </View>
       <View style={styles.messageContainer}>
         <Text style={styles.message}>{message}</Text>
-        {isOpen ? <Text style={styles.description}>{description}</Text> : null}
+        <Text style={styles.description}>{description}</Text>
       </View>
     </View>
   );
 }
 
 const getStyles = createThemedStyles(({ colors }) => StyleSheet.create({
-  container: { alignItems: 'center', padding: spacing.lg, gap: spacing.md },
+  container: { alignItems: 'center', padding: spacing.lg, gap: 0 },
   characterContainer: { width: 63, height: 91, alignItems: 'center', justifyContent: 'center' },
-  // 열린 문만 오른쪽으로 늘려 본체의 중심과 문구 위치를 유지한다.
-  openCharacter: { width: 63 + OPEN_DOOR_WIDTH, transform: [{ translateX: OPEN_DOOR_WIDTH / 2 }] },
-  openImage: { width: '100%', height: 101 * CHARACTER_SCALE },
+  conceptContainer: { width: 150, height: 126 },
+  conceptImage: { width: 150, height: 150 },
   character: { width: 70, height: 101, transform: [{ scale: CHARACTER_SCALE }] },
   fridge: { position: 'absolute', top: 0, width: 70, height: 94, borderWidth: 1.7, borderColor: colors.chilled, borderRadius: 15, backgroundColor: colors.chilledBackground, overflow: 'hidden' },
   divider: { position: 'absolute', top: 43, left: 0, right: 0, height: 1.7, backgroundColor: colors.chilled },

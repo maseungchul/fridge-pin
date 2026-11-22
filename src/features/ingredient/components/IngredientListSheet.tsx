@@ -19,7 +19,7 @@ import { alertTitles } from '@/constants/alertTitles';
 import { consumeIngredients, deleteIngredients, getIngredientsByPosition, moveIngredients } from '@/db/ingredientRepository';
 import { getShoppingItems, registerPurchasedIngredients } from '@/db/shoppingRepository';
 import type { PurchasedIngredientRegistration, PurchasedShoppingItem } from '@/db/shoppingRepository';
-import type { FridgeLayout, SlotPosition } from '@/features/fridge/model/fridgeLayout';
+import type { FridgeLayout, SlotPosition, StorageMode } from '@/features/fridge/model/fridgeLayout';
 import type { Ingredient } from '@/features/ingredient/model/ingredient';
 import { getIngredientExpirationStatus } from '@/features/ingredient/model/ingredient';
 import { IngredientMoveQueueHeader, IngredientMoveQueueList, useMoveQueueSelection } from '@/features/ingredient/components/IngredientMoveQueueList';
@@ -34,6 +34,7 @@ import { getErrorMessage } from '@/i18n/errors';
 
 interface IngredientListSheetProps {
   position: SlotPosition;
+  storageMode?: StorageMode | null;
   layout: FridgeLayout;
   allIngredients: Ingredient[];
   onClose: () => void;
@@ -48,7 +49,7 @@ interface IngredientListSheetProps {
   onRegistered: (ingredients: Ingredient[]) => void;
 }
 
-export function IngredientListSheet({ position, layout, allIngredients = [], initialIndex, onIndexChange, onClose, onOpenForm, isFormOpen, formResultVersion, onDeleted, onConsumed, onMoved, onRegistered }: IngredientListSheetProps) {
+export function IngredientListSheet({ position, storageMode, layout, allIngredients = [], initialIndex, onIndexChange, onClose, onOpenForm, isFormOpen, formResultVersion, onDeleted, onConsumed, onMoved, onRegistered }: IngredientListSheetProps) {
   const { mode, colors, ingredientBadgeColors } = useAppTheme();
   const styles = getStyles(mode);
   const { t } = useTranslation();
@@ -467,7 +468,7 @@ export function IngredientListSheet({ position, layout, allIngredients = [], ini
                             scrollIndicatorInsets={{ top: 0, bottom: spacing.md + (isSelecting ? 0 : insets.bottom), left: 0, right: spacing.xs }}
                             style={styles.list} contentContainerStyle={[ingredients.length === 0 ? styles.emptyList : undefined, { paddingBottom: isSelecting ? 0 : insets.bottom }]}
                             ListEmptyComponent={
-                              <EmptyListState message={t('ingredient.emptyTitle')} description={t('ingredient.emptyDescription')} />
+                              <EmptyListState storageMode={storageMode} message={t('ingredient.emptyTitle')} description={t('ingredient.emptyDescription')} />
                             }
                             renderItem={({ item }) => {
                               const expiration = getIngredientExpirationStatus(item.expirationDate, undefined, t);

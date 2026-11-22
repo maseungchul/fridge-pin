@@ -414,6 +414,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
           onClose={() => setIsMoveQueueOpen(false)} /> : null}
         {isIngredientListOpen && focusPhase === 'open' && selectedPosition && layout ? (
           <IngredientListSheet key={selectedPosition.id} position={selectedPosition} layout={layout} allIngredients={ingredients}
+            storageMode={refrigerator?.rows.flatMap(row => row.compartments).find(body => body.id === selectedPosition.areaId || body.doorIds.includes(selectedPosition.areaId))?.storageMode}
             initialIndex={ingredientListIndex} onIndexChange={setIngredientListIndex}
             isFormOpen={isIngredientFormOpen} formResultVersion={ingredientFormResultVersion}
             onOpenForm={ingredient => {

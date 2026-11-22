@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180">
+  <style>:root { --line: #42654e; --fill: #e8eee9; }</style>
+  <g stroke="var(--line)" stroke-linecap="round" stroke-linejoin="round">
+    <g fill="var(--fill)" stroke-width="1.8">
+      <rect x="63" y="130" width="11" height="8" rx="4" />
+      <rect x="106" y="130" width="11" height="8" rx="4" />
+      <rect x="53" y="38" width="74" height="96" rx="16" />
+    </g>
+    <path d="M53 80h74" fill="none" stroke-width="1.8" />
+    <g fill="none" stroke-width="1.5"><rect x="60" y="59" width="5" height="14" rx="2.5" /><rect x="60" y="87" width="5" height="14" rx="2.5" /></g>
+    <g fill="var(--line)" stroke="none"><circle cx="85" cy="61" r="1.8" /><circle cx="102" cy="61" r="1.8" /></g>
+    <g fill="var(--fill)" stroke-width="1.3"><path d="M25 79q1-11 16-11-1 11-16 11Z" /><path d="M137 44q1-11 16-11-1 11-16 11Z" /><path d="M137 112q1-11 16-11-1 11-16 11Z" /></g>
+    <g fill="none" stroke-width="1" opacity=".6"><path d="M24 83q18-13 24-10M132 60q16-3 23-16M101 123q21-14 42-11" /></g>
+  </g>
+</svg>
