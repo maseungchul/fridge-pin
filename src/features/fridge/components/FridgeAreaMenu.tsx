@@ -4,6 +4,7 @@
  * 하위 설정은 도면과 분리된 표시 공간에 펼치며, 초안과 선택 상태는 호출자가 관리한다.
  */
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable } from '@/components/FeedbackPressable';
 import { getIconChipTabStyles } from '@/components/IconChipTabs';
@@ -61,6 +62,7 @@ export function FridgeAreaMenu({ disabled, activeCategory, onCategoryChange, sho
   const { mode, colors } = useAppTheme();
   const styles = getStyles(mode);
   const { t } = useTranslation();
+  const [labelWidths, setLabelWidths] = useState<Partial<Record<FridgeMenuCategory, number>>>({});
   const categories = categoryOptions.map(category => ({ ...category, label: t(category.label) })).filter(category => {
     switch (category.id) {
       case 'mode': return showOpeningAction;
@@ -135,8 +137,12 @@ export function FridgeAreaMenu({ disabled, activeCategory, onCategoryChange, sho
                 const color = expanded ? colors.chilled : pressed ? colors.iconPressed : colors.text;
                 return <>
                   <MaterialDesignIcons name={category.icon} size={24} color={color} accessible={false} />
-                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85} style={[styles.label, { color }]}>{category.label}</Text>
-                  {expanded ? <View pointerEvents="none" style={styles.selectedIndicator} /> : null}
+                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}
+                    onTextLayout={({ nativeEvent }) => {
+                      const width = nativeEvent.lines[0]?.width ?? 0;
+                      setLabelWidths(previous => previous[category.id] === width ? previous : { ...previous, [category.id]: width });
+                    }} style={[styles.label, { color }]}>{category.label}</Text>
+                  {expanded ? <View pointerEvents="none" style={[styles.selectedIndicator, { width: labelWidths[category.id] ?? 0 }]} /> : null}
                 </>;
               }}
             </FeedbackPressable>
@@ -199,7 +205,7 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   },
   action: { ...getFridgeToolbarStyles(mode).action, maxWidth: undefined, minHeight: 0, height: 50 - StyleSheet.hairlineWidth,
     justifyContent: 'flex-start', paddingTop: spacing.xs, paddingBottom: 0, gap: 0, borderWidth: 0, backgroundColor: 'transparent' },
-  selectedIndicator: { position: 'absolute', bottom: 0, width: 16, height: 2, borderRadius: 1, backgroundColor: colors.chilled },
+  selectedIndicator: { position: 'absolute', bottom: 0, height: 2, borderRadius: 1, backgroundColor: colors.chilled },
   choices: {
     flexGrow: 1,
     flexDirection: 'row',
