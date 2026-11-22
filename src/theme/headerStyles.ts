@@ -21,7 +21,6 @@ export const getHeaderStyles = createThemedStyles(({ colors }) => StyleSheet.cre
   header: {
     minHeight: HEADER_HEIGHT, flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingHorizontal: spacing.md, paddingTop: spacing.xs, paddingBottom: spacing.xs,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   title: { color: colors.text, fontSize: 20, lineHeight: 26, fontWeight: '700', includeFontPadding: false },
 }));
