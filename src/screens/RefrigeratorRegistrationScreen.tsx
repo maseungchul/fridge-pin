@@ -70,11 +70,13 @@ export function RefrigeratorRegistrationScreen({
   const { width: windowWidth } = useWindowDimensions();
   const [draft, setDraft] = useState(() => createRefrigeratorDraft(undefined, t));
   const [savedName, setSavedName] = useState('');
+  const [savedRows, setSavedRows] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(isEditing);
   const [loadError, setLoadError] = useState<{ cause: unknown } | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const loadedRefrigeratorId = useRef<string | null>(null);
   const isUnavailable = isLoading || loadError !== null;
+  const hasChanges = savedRows !== null && (draft.name.trim() !== savedName || JSON.stringify(draft.rows) !== savedRows);
   const [step, setStep] = useState<RegistrationStep>('basic');
   const [menuCategory, setMenuCategory] = useState<FridgeMenuCategory | null>(null);
   const [slotIndex, setSlotIndex] = useState(0);
@@ -135,6 +137,7 @@ export function RefrigeratorRegistrationScreen({
       if (!refrigerator || refrigerator.id !== refrigeratorId) throw new AppError('errors.fridgeMissing');
       setDraft(createRefrigeratorDraft(refrigerator));
       setSavedName(refrigerator.name);
+      setSavedRows(JSON.stringify(refrigerator.rows));
       loadedRefrigeratorId.current = refrigerator.id;
     }).catch(error => {
       if (mounted) setLoadError({ cause: error });
@@ -195,7 +198,7 @@ export function RefrigeratorRegistrationScreen({
   // 상태가 다시 렌더링되기 전의 연속 탭도 막고, 실패한 초안은 그대로 재시도한다.
   async function saveRegistration() {
     if (saving.current || stepChanging.current || isFocusMoving || isUnavailable
-      || isEditing && loadedRefrigeratorId.current !== refrigeratorId) return;
+      || isEditing && (loadedRefrigeratorId.current !== refrigeratorId || !hasChanges)) return;
     Keyboard.dismiss();
     saving.current = true;
     setIsSaving(true);
@@ -375,8 +378,8 @@ export function RefrigeratorRegistrationScreen({
             </FeedbackPressable>
           ) : (
             <FeedbackPressable iconFeedback accessibilityRole="button" accessibilityLabel={isEditing ? t('fridge.saveEdit') : t('fridge.register')}
-              accessibilityState={{ disabled: isSaving || isStepChanging || isFocusMoving, busy: isSaving }}
-              disabled={isSaving} interactionBlocked={isStepChanging || isFocusMoving} onPress={saveRegistration} style={styles.headerIconButton}>
+              accessibilityState={{ disabled: isSaving || isStepChanging || isFocusMoving || isEditing && !hasChanges, busy: isSaving }}
+              disabled={isSaving || isEditing && !hasChanges} interactionBlocked={isStepChanging || isFocusMoving} onPress={saveRegistration} style={styles.headerIconButton}>
               {isSaving ? <ActivityIndicator color={colors.text} accessibilityLabel={t('fridge.saving')} />
                 : <MaterialDesignIcons name={isEditing ? 'checkbox-marked-circle-outline' : 'checkbox-marked-circle-plus-outline'}
                   size={COMPACT_HEADER_ICON_SIZE} color={colors.text} accessible={false} />}
