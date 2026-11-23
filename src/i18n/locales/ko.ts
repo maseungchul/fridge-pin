@@ -136,7 +136,7 @@ export const ko = {
   'fridge.registrationSuccess': '냉장고를 등록했습니다.',
   'fridge.updateSuccess': '냉장고를 수정했습니다.',
   'fridge.saveFailure': '냉장고를 저장하지 못했습니다. 다시 시도해 주세요.',
-  'fridge.unassignedConfirm': '재료 {count}개의 기존 위치가 사라집니다. 저장하면 ‘위치 지정 필요’ 목록으로 옮겨집니다.\n저장한 도면 변경은 되돌릴 수 없습니다.',
+  'fridge.unassignedConfirm': '재료 {count}개의 기존 위치가 사라집니다. 저장하면 ‘위치 미지정’ 목록으로 옮겨집니다.\n저장한 도면 변경은 되돌릴 수 없습니다.',
   'fridge.unassignedChanged': '위치를 다시 지정할 재료가 바뀌었습니다. 저장을 다시 눌러 확인해 주세요.',
   'fridge.cancelEdit': '냉장고 편집 취소',
   'fridge.cancelRegistration': '냉장고 등록 취소',
