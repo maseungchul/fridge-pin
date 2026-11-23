@@ -40,6 +40,8 @@ export function IngredientPositionScreen({ navigation, route }: IngredientPositi
   const params = route.params;
   const purchasedItems = 'items' in params ? params.items : null;
   const unassignedIds = 'ids' in params ? params.ids : null;
+  const batchCount = purchasedItems?.length ?? unassignedIds?.length;
+  const usesHeaderAction = batchCount !== undefined;
   const [result, setResult] = useState<PositionResult | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ index: number; positionId?: string } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -93,9 +95,8 @@ export function IngredientPositionScreen({ navigation, route }: IngredientPositi
   const layout = loaded?.refrigerator ? getDraftLayout(loaded.refrigerator, [], t) : null;
   const position = layout?.positions.find(candidate => candidate.id === selectedSlot?.positionId && candidate.areaId === selectedAreaId);
   const area = layout?.areas.find(candidate => candidate.id === position?.areaId);
-  const canConfirm = !!position && focusPhase === 'open'
-    && (!!purchasedItems?.length || !!unassignedIds?.length || !!loaded?.record);
-  const showRegisterHighlight = !!purchasedItems && canConfirm;
+  const canConfirm = !!position && focusPhase === 'open' && (!!batchCount || !!loaded?.record);
+  const showRegisterHighlight = usesHeaderAction && canConfirm;
   const registerOpacity = useAnimatedValue(1);
 
   useEffect(() => {
@@ -103,7 +104,7 @@ export function IngredientPositionScreen({ navigation, route }: IngredientPositi
 
     // 등록이 가능해진 순간에만 강조해 칸을 바꿀 때 효과가 반복되지 않게 한다.
     const animation = Animated.loop(Animated.sequence([
-      Animated.timing(registerOpacity, { toValue: 0.4, duration: 800, useNativeDriver: true, isInteraction: false }),
+      Animated.timing(registerOpacity, { toValue: 0.2, duration: 800, useNativeDriver: true, isInteraction: false }),
       Animated.timing(registerOpacity, { toValue: 1, duration: 800, useNativeDriver: true, isInteraction: false }),
     ]), { iterations: 3 });
     animation.start();
@@ -172,13 +173,13 @@ export function IngredientPositionScreen({ navigation, route }: IngredientPositi
           disabled={isSaving} accessibilityState={{ disabled: isSaving }} onPress={goBack} style={styles.backButton}>
           <MaterialDesignIcons name="arrow-left" size={COMPACT_HEADER_ICON_SIZE} color={colors.text} accessible={false} />
         </FeedbackPressable>
-        <Text accessibilityRole="header" style={[styles.title, purchasedItems && styles.centeredTitle]}>
-          {t(purchasedItems ? 'shopping.selectPosition' : unassignedIds ? 'unassigned.choose' : 'consumed.selectPosition')}
+        <Text accessibilityRole="header" style={[styles.title, usesHeaderAction && styles.centeredTitle]}>
+          {t(usesHeaderAction ? 'shopping.selectPosition' : 'consumed.selectPosition')}
         </Text>
-        {purchasedItems ? (
+        {usesHeaderAction ? (
           <Animated.View style={[styles.registerAction, { opacity: canConfirm && !isSaving ? registerOpacity : 1 }]}>
             <FeedbackPressable iconFeedback accessibilityRole="button"
-              accessibilityLabel={t('shopping.registerHere', { count: purchasedItems.length })}
+              accessibilityLabel={t(unassignedIds ? 'unassigned.assignHere' : 'shopping.registerHere', { count: batchCount })}
               disabled={!canConfirm || isSaving} accessibilityState={{ disabled: !canConfirm || isSaving, busy: isSaving }}
               onPress={confirmPosition} style={styles.registerButton}>
               {isSaving ? <ActivityIndicator color={colors.text} accessibilityLabel={t('ingredient.registering')} /> :
@@ -222,13 +223,12 @@ export function IngredientPositionScreen({ navigation, route }: IngredientPositi
                 }} /> : null}
             </View>
           </View>
-          {!purchasedItems ? (
+          {!usesHeaderAction ? (
             <View style={styles.footer}>
               {position && area ? (
                 <Text style={styles.description}>{`${area.compartment} · ${area.name} · ${getPositionName(position, t)}`}</Text>
               ) : null}
-              <PrimaryButton label={t(unassignedIds ? 'unassigned.assignHere' : 'consumed.restoreHere')}
-                icon={unassignedIds ? 'map-marker-outline' : 'restore'}
+              <PrimaryButton label={t('consumed.restoreHere')} icon="restore"
                 disabled={!canConfirm} loading={isSaving} onPress={confirmPosition} />
             </View>
           ) : null}
