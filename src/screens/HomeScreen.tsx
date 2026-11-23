@@ -416,7 +416,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                   disabled={false} interactionBlocked={isToolbarBlocked} onPress={toggleToolbar} feedback="none"
                   style={[styles.toolbarToggle, styles.floatingButton]} hitSlop={4}>
                   {({ pressed }) => <>
-                    <MaterialDesignIcons name={isToolbarExpanded ? 'chevron-right' : 'chevron-left'} size={HOME_TOOL_ICON_SIZE}
+                    <MaterialDesignIcons name={isToolbarExpanded ? 'transfer-right' : 'transfer-left'} size={HOME_TOOL_ICON_SIZE}
                       color={pressed ? colors.sage : colors.chilled} accessible={false} />
                     {!isToolbarExpanded && (unassignedCount > 0 || hasQueuedIngredients || hasUnseenConsumed) ? (
                       <View style={styles.toolbarDotOnToggle} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
