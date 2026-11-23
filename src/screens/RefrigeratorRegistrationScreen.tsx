@@ -445,9 +445,10 @@ export function RefrigeratorRegistrationScreen({
                       <FormTextInput label={t('fridge.name')} accessibilityLabel={t('fridge.name')} value={draft.name} required
                         onChangeText={name => { if (!saving.current) setDraft(current => ({ ...current, name })); }}
                         editable={!isSaving} maxLength={50} containerStyle={styles.nameField}
-                        trailingElement={isEditing ? <PrimaryButton label={t('common.change')} onPress={saveRefrigeratorName}
+                        trailingElement={isEditing ? <PrimaryButton label={t('common.change')} variant="secondary" onPress={saveRefrigeratorName}
                           disabled={!draft.name.trim() || draft.name.trim() === savedName || isUnavailable}
-                          interactionBlocked={isStepChanging} loading={isSaving} style={styles.nameSaveButton} /> : undefined} />
+                          interactionBlocked={isStepChanging} loading={isSaving} style={styles.nameSaveButton}
+                          labelStyle={styles.nameSaveLabel} /> : undefined} />
                       <View style={styles.section}>
                         <View style={styles.sectionHeader}>
                           <Text style={styles.label}>{t('fridge.structure')}</Text>
@@ -674,7 +675,15 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
     height: 44,
     minWidth: 64,
     flexShrink: 0,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 8,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+  },
+  nameSaveLabel: {
+    color: colors.chilled,
+    fontSize: 14,
+    fontWeight: '700',
   },
   sectionHeader: {
     gap: spacing.xs,
