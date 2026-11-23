@@ -416,7 +416,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                   disabled={false} interactionBlocked={isToolbarBlocked} onPress={toggleToolbar} feedback="none"
                   style={[styles.toolbarToggle, styles.floatingButton]} hitSlop={4}>
                   {({ pressed }) => <>
-                    <MaterialDesignIcons name={isToolbarExpanded ? 'menu-close' : 'menu-open'} size={HOME_TOOL_ICON_SIZE}
+                    <MaterialDesignIcons name={isToolbarExpanded ? 'chevron-right' : 'chevron-left'} size={HOME_TOOL_ICON_SIZE}
                       color={pressed ? colors.sheetHandle : colors.buttonText} accessible={false} />
                     {!isToolbarExpanded && (unassignedCount > 0 || hasQueuedIngredients || hasUnseenConsumed) ? (
                       <View style={[styles.toolbarDot, styles.toolbarDotOnToggle]} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
@@ -555,13 +555,13 @@ const getStyles = createThemedStyles(({ colors, fridgeDoorColors }, mode) => Sty
   homeActions: { alignItems: 'center', paddingVertical: spacing.sm, paddingLeft: HOME_TOOLBAR_EDGE_SPACE,
     paddingRight: HOME_TOOLBAR_EDGE_SPACE + HOME_TOOLBAR_TOGGLE_OVERLAP },
   homeAction: { flex: 0, flexShrink: 0, maxWidth: undefined, minHeight: HOME_MENU_SIZE, flexDirection: 'row', gap: spacing.xs,
-    paddingHorizontal: spacing.sm, borderRadius: 18, borderColor: colors.sage,
-    boxShadow: [{ offsetX: 0, offsetY: 1, blurRadius: 6, color: `${colors.button}14` }] },
-  homeLabel: { color: colors.chilled, fontSize: HOME_TOOL_LABEL_SIZE },
+    paddingHorizontal: spacing.sm, borderRadius: 20, borderWidth: 0,
+    boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 8, color: `${colors.button}1F` }] },
+  homeLabel: { color: colors.text, fontSize: HOME_TOOL_LABEL_SIZE },
   toolbarDot: { position: 'absolute', top: -4, right: -4, width: 8, height: 8, borderRadius: 4,
     backgroundColor: colors.moveQueueBadge },
   toolbarDotOnToggle: { right: -1 },
-  floatingButton: { boxShadow: [{ offsetX: 0, offsetY: 3, blurRadius: 8, color: `${colors.button}30` }] },
+  floatingButton: { boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 8, color: `${colors.button}24` }] },
   toolbarToggle: { zIndex: 1, width: HOME_MENU_SIZE, height: HOME_MENU_SIZE, flexShrink: 0, alignItems: 'center', justifyContent: 'center',
     borderRadius: HOME_MENU_SIZE / 2, backgroundColor: colors.chilledFill },
   diagram: {
