@@ -53,10 +53,13 @@ export function IngredientFormScreen({ navigation, route, onResultChange }: Ingr
   const saving = useRef(false);
   const leaving = useRef(false);
   const savedIngredient = useRef<Ingredient | null>(null);
+  const hasChanges = !editingIngredient || draft.name.trim() !== editingIngredient.name
+    || draft.quantity.trim() !== editingIngredient.quantity || (draft.memo?.trim() || null) !== (editingIngredient.memo || null)
+    || draft.expirationDate !== editingIngredient.expirationDate;
   const canSave = !!draft.name.trim() && !!draft.quantity.trim()
     && (draft.name.trim().length <= INGREDIENT_NAME_MAX_LENGTH || draft.name === editingIngredient?.name)
     && (draft.quantity.trim().length <= INGREDIENT_QUANTITY_MAX_LENGTH || draft.quantity === editingIngredient?.quantity)
-    && ((draft.memo ?? '').trim().length <= INGREDIENT_MEMO_MAX_LENGTH || draft.memo === editingIngredient?.memo) && !isDatePickerOpen;
+    && ((draft.memo ?? '').trim().length <= INGREDIENT_MEMO_MAX_LENGTH || draft.memo === editingIngredient?.memo) && !isDatePickerOpen && hasChanges;
 
   useEffect(() => {
     onResultChange({ draft, isEditing, savedIngredient: savedIngredient.current });

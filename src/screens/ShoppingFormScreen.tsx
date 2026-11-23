@@ -37,9 +37,11 @@ export function ShoppingFormScreen({ navigation, route }: NativeStackScreenProps
   const quantityInput = useRef<ComponentRef<typeof FormTextInput>>(null);
   const saving = useRef(false);
   const leaving = useRef(false);
+  const hasChanges = !editingItem || name.trim() !== editingItem.name || quantity.trim() !== editingItem.quantity
+    || (memo.trim() || null) !== (editingItem.memo || null);
   const canSave = !!name.trim() && !!quantity.trim()
     && name.trim().length <= INGREDIENT_NAME_MAX_LENGTH && quantity.trim().length <= INGREDIENT_QUANTITY_MAX_LENGTH
-    && memo.trim().length <= INGREDIENT_MEMO_MAX_LENGTH;
+    && memo.trim().length <= INGREDIENT_MEMO_MAX_LENGTH && hasChanges;
 
   usePreventRemove(isSaving, ({ data }) => {
     if (leaving.current) navigation.dispatch(data.action);
