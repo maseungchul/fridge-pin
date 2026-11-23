@@ -417,7 +417,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                   style={[styles.toolbarToggle, styles.floatingButton]} hitSlop={4}>
                   {({ pressed }) => <>
                     <MaterialDesignIcons name={isToolbarExpanded ? 'chevron-right' : 'chevron-left'} size={HOME_TOOL_ICON_SIZE}
-                      color={pressed ? colors.sheetHandle : colors.buttonText} accessible={false} />
+                      color={pressed ? colors.sage : colors.chilled} accessible={false} />
                     {!isToolbarExpanded && (unassignedCount > 0 || hasQueuedIngredients || hasUnseenConsumed) ? (
                       <View style={styles.toolbarDotOnToggle} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
                     ) : null}
@@ -559,10 +559,10 @@ const getStyles = createThemedStyles(({ colors, fridgeDoorColors }, mode) => Sty
     boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 8, color: `${colors.button}1F` }] },
   homeLabel: { color: colors.text, fontSize: HOME_TOOL_LABEL_SIZE },
   toolbarDot: { position: 'absolute', top: -5, right: -3, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.chilled },
-  toolbarDotOnToggle: { position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.noticeForeground },
+  toolbarDotOnToggle: { position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.chilled },
   floatingButton: { boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 8, color: `${colors.button}24` }] },
   toolbarToggle: { zIndex: 1, width: HOME_MENU_SIZE, height: HOME_MENU_SIZE, flexShrink: 0, alignItems: 'center', justifyContent: 'center',
-    borderRadius: HOME_MENU_SIZE / 2, backgroundColor: colors.chilledFill },
+    borderRadius: HOME_MENU_SIZE / 2, backgroundColor: colors.surface },
   diagram: {
     flex: 1,
   },
