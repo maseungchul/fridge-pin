@@ -6,7 +6,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { AppError } from '@/i18n/errors';
 
-const DATABASE_VERSION = 10;
+const DATABASE_VERSION = 11;
 
 const INGREDIENT_TABLE_SQL = `CREATE TABLE IF NOT EXISTS ingredients (
   id TEXT PRIMARY KEY NOT NULL,
@@ -62,6 +62,7 @@ export async function initializeDatabase(db: SQLiteDatabase) {
       if (version === 8) await db.execAsync('ALTER TABLE shopping_items ADD COLUMN memo TEXT;');
       if (version === 8 || version === 9) await db.execAsync('ALTER TABLE shopping_items ADD COLUMN purchased_at TEXT;');
       else await createShoppingItemsTable(db);
+      await createUnassignedIngredientsTable(db);
       const violation = await db.getFirstAsync('PRAGMA foreign_key_check;');
       if (violation) throw new AppError('errors.databaseConnections');
       await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
@@ -99,6 +100,7 @@ async function recoverTemporaryVersion6(db: SQLiteDatabase) {
   await createTables(db);
   await createConsumedIngredientsTable(db);
   await createShoppingItemsTable(db);
+  await createUnassignedIngredientsTable(db);
   await db.execAsync(`
     INSERT INTO ingredients (id, name, quantity, expiration_date, slot_id, drawer_number, memo)
       SELECT id, name, quantity, expiration_date, slot_id, drawer_number, memo FROM recovery_v6_ingredients;
@@ -128,6 +130,27 @@ async function createConsumedIngredientsTable(db: SQLiteDatabase) {
       consumed_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_consumed_ingredients_date ON consumed_ingredients (consumed_at DESC, id);
+  `);
+}
+
+/** 도면 편집으로 사라진 위치는 외래 키 없이 당시의 순서와 함께 보관한다. */
+async function createUnassignedIngredientsTable(db: SQLiteDatabase) {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS unassigned_ingredients (
+      id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL,
+      quantity TEXT NOT NULL,
+      memo TEXT,
+      expiration_date TEXT,
+      slot_id TEXT NOT NULL,
+      drawer_number INTEGER NOT NULL CHECK (drawer_number IN (0, 1, 2)),
+      row_number INTEGER NOT NULL,
+      first_column INTEGER NOT NULL,
+      last_column INTEGER NOT NULL,
+      door_count INTEGER NOT NULL,
+      slot_number INTEGER NOT NULL,
+      is_body INTEGER NOT NULL CHECK (is_body IN (0, 1))
+    );
   `);
 }
 

@@ -6,7 +6,7 @@
  * 단계 이동·등록은 상단 헤더에, 편집 툴바는 화면 하단에 고정한다.
  * 편집은 저장된 구성을 불러오며, 전체 저장 실패 시 입력을 유지하고 성공 안내를 표시하고 홈으로 돌아간다.
  * 편집 화면의 이름 변경은 구조 초안을 유지한 채 별도로 저장한다.
- * 재료의 보관 위치를 없애거나 숨기는 변경은 초안에 반영하기 전에 안내한다.
+ * 보관 위치가 사라지는 재료는 저장 전에 안내하고, 확인 후 도면과 함께 저장한다.
  * 내부 설정의 홈 아이콘은 상단 뒤로가기 오른쪽에 배치하고 저장하지 않은 초안을 종료한다.
  */
 import { usePreventRemove } from '@react-navigation/native';
@@ -33,11 +33,10 @@ import type { FridgeMenuCategory } from '@/features/fridge/components/FridgeArea
 import { fridgeMessages } from '@/features/fridge/constants/messages';
 import {
   addDraftRow, areaNames, changeDraftDoorCount, createRefrigeratorDraft,
-  getAdjacentCompartment, getDraftAreaLocation, getDraftLayout, getSlotName, MAX_DOOR_SLOTS, MAX_DOORS_PER_ROW, MAX_ROWS, MAX_SLOTS, mergeDraftCompartments,
+  getAdjacentCompartment, getDraftAreaLocation, getIngredientsWithoutPosition, getSlotName, MAX_DOOR_SLOTS, MAX_DOORS_PER_ROW, MAX_ROWS, MAX_SLOTS, mergeDraftCompartments,
   removeDraftRow, setDraftDoorOpening, splitDraftCompartment,
 } from '@/features/fridge/model/fridgeLayout';
 import type { DoorOpening, RefrigeratorDraft, SlotConfiguration, StorageMode } from '@/features/fridge/model/fridgeLayout';
-import type { Ingredient } from '@/features/ingredient/model/ingredient';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 import { spacing, createThemedStyles } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/ThemeProvider';
@@ -70,7 +69,6 @@ export function RefrigeratorRegistrationScreen({
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const [draft, setDraft] = useState(() => createRefrigeratorDraft(undefined, t));
-  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [savedName, setSavedName] = useState('');
   const [isLoading, setIsLoading] = useState(isEditing);
   const [loadError, setLoadError] = useState<{ cause: unknown } | null>(null);
@@ -132,11 +130,10 @@ export function RefrigeratorRegistrationScreen({
     if (refrigeratorId === undefined) return;
     let mounted = true;
     loadedRefrigeratorId.current = null;
-    Promise.all([getRefrigerator(db), getIngredients(db)]).then(([refrigerator, storedIngredients]) => {
+    getRefrigerator(db).then(refrigerator => {
       if (!mounted) return;
       if (!refrigerator || refrigerator.id !== refrigeratorId) throw new AppError('errors.fridgeMissing');
       setDraft(createRefrigeratorDraft(refrigerator));
-      setIngredients(storedIngredients);
       setSavedName(refrigerator.name);
       loadedRefrigeratorId.current = refrigerator.id;
     }).catch(error => {
@@ -203,8 +200,23 @@ export function RefrigeratorRegistrationScreen({
     saving.current = true;
     setIsSaving(true);
     try {
-      if (refrigeratorId !== undefined) await updateRefrigerator(db, refrigeratorId, draft);
-      else await registerRefrigerator(db, draft);
+      if (refrigeratorId !== undefined) {
+        const affected = getIngredientsWithoutPosition(draft, await getIngredients(db));
+        if (affected.length) {
+          const confirmed = await new Promise<boolean>(resolve => {
+            Alert.alert(t(alertTitles.warning), t('fridge.unassignedConfirm', { count: affected.length }), [
+              { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(false) },
+              { text: t('common.ok'), onPress: () => resolve(true) },
+            ], { cancelable: false });
+          });
+          if (!confirmed) {
+            saving.current = false;
+            setIsSaving(false);
+            return;
+          }
+        }
+        await updateRefrigerator(db, refrigeratorId, draft, affected.map(item => item.id));
+      } else await registerRefrigerator(db, draft);
     } catch (error) {
       saving.current = false;
       setIsSaving(false);
@@ -259,13 +271,8 @@ export function RefrigeratorRegistrationScreen({
     setSelectedPositionId(undefined);
   }
 
-  // 홈과 같은 위치 계산으로 재료가 사라지는 변경만 막고, 거부 시 기존 초안과 선택을 유지한다.
   function updateStructure(nextDraft: RefrigeratorDraft) {
     if (saving.current || isUnavailable) return false;
-    if (getDraftLayout(nextDraft, ingredients).ingredients.length !== ingredients.length) {
-      Alert.alert(t(alertTitles.info), t(fridgeMessages.ingredientLocationChangeBlocked), [{ text: t('common.ok') }]);
-      return false;
-    }
     setDraft(nextDraft);
     return true;
   }

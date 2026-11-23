@@ -274,6 +274,12 @@ export function getDraftLayout(draft: Pick<RefrigeratorDraft, 'rows'>, ingredien
   }) };
 }
 
+/** 저장 전 안내와 실제 저장에서 칸이 사라지는 재료를 같은 기준으로 찾는다. */
+export function getIngredientsWithoutPosition(draft: Pick<RefrigeratorDraft, 'rows'>, ingredients: Ingredient[]) {
+  const retained = new Set(getDraftLayout(draft, ingredients).ingredients.map(ingredient => ingredient.id));
+  return ingredients.filter(ingredient => !retained.has(ingredient.id));
+}
+
 /** 본체와 닫힌 문을 같은 0~1 기준선에 배치해 문을 열어도 본체 폭·위치를 유지한다. */
 export function getDraftRowGeometry(row: DraftRow) {
   const unitWidth = 1 / row.doors.length;

@@ -447,7 +447,7 @@ export function IngredientListSheet({ position, storageMode, layout, allIngredie
                       <View style={styles.pageContent}>
                         {secondary ? secondaryPage === 'queue' ? (
                           <IngredientMoveQueueList ingredients={queuedIngredients} layout={layout} disabled={isBusy || isChanging}
-                            selection={queueSelection} onRemove={moveQueue.remove} />
+                            selection={queueSelection} onRemove={ids => ids.forEach(moveQueue.remove)} />
                         ) : purchasedItems ? (
                           <PurchasedItemPicker disabled={isBusy || isChanging} items={purchasedItems} onRegister={importPurchased}
                             onSelectionActionChange={setPurchasedSelection} />

@@ -24,6 +24,7 @@ export type RootStackParamList = {
     draft: IngredientDraft;
   };
   IngredientRestore: { id: string; consumedAt: string };
+  IngredientAssign: { ids: string[] };
   ShoppingIngredientRegistration: { items: PurchasedShoppingItem[] };
   ShoppingForm: { item: ShoppingItem } | undefined;
 };
@@ -67,6 +68,7 @@ export function RootNavigator() {
         {props => <IngredientFormScreen {...props} onResultChange={updateIngredientFormResult} />}
       </Stack.Screen>
       <Stack.Screen name="IngredientRestore" component={IngredientPositionScreen} />
+      <Stack.Screen name="IngredientAssign" component={IngredientPositionScreen} />
       <Stack.Screen name="ShoppingIngredientRegistration" component={IngredientPositionScreen} />
       <Stack.Screen name="ShoppingForm" component={ShoppingFormScreen} options={{
         presentation: 'transparentModal', animation: 'none', gestureEnabled: false,

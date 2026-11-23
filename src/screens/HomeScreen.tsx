@@ -21,7 +21,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { FeedbackPressable } from '@/components/FeedbackPressable';
 import { getRefrigerator } from '@/db/refrigeratorRepository';
-import { getIngredients } from '@/db/ingredientRepository';
+import { deleteUnassignedIngredients, getIngredients, getUnassignedIngredients } from '@/db/ingredientRepository';
+import type { UnassignedIngredient } from '@/db/ingredientRepository';
 import { FridgeStructurePreview } from '@/features/fridge/components/FridgeStructurePreview';
 import { FridgeIngredientLegend } from '@/features/fridge/components/FridgeIngredientLegend';
 import { FridgeFocusView, FridgeInteriorMap, useFridgeFocus } from '@/features/fridge/components/FridgeInteriorMap';
@@ -68,6 +69,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
   const { ingredientIds: queuedIds, retain: retainMoveQueue } = useIngredientMoveQueue();
   const [refrigerator, setRefrigerator] = useState<Refrigerator | null>(null);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [unassignedIngredients, setUnassignedIngredients] = useState<UnassignedIngredient[]>([]);
   const { isLoading, showLoading, hasLoaded, runLoad, cancelLoad } = useDelayedLoading();
   const [error, setError] = useState<'home.loadError' | null>(null);
   useEffect(() => {
@@ -75,6 +77,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
     clearDeletedRefrigeratorRef.current = () => {
       setRefrigerator(null);
       setIngredients([]);
+      setUnassignedIngredients([]);
       setError(null);
     };
     return () => { clearDeletedRefrigeratorRef.current = null; };
@@ -89,7 +92,8 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
   const [isConsumedOpen, setIsConsumedOpen] = useState(false);
   const [hasUnseenConsumed, setHasUnseenConsumed] = useState<boolean | null>(null);
   const consumedBadgeWrite = useRef(Promise.resolve());
-  const [isMoveQueueOpen, setIsMoveQueueOpen] = useState(false);
+  const [openLocationList, setOpenLocationList] = useState<'queue' | 'unassigned' | null>(null);
+  const returnToUnassignedList = useRef(false);
   const [isToolbarExpanded, setIsToolbarExpanded] = useState(true);
   const [isToolbarChanging, setIsToolbarChanging] = useState(false);
   const [toolbarWidth, setToolbarWidth] = useState(0);
@@ -101,9 +105,10 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
   const toolbarChanging = useRef(false);
   const closedScrollY = useRef(0);
   const isFocusBlocked = useCallback(() => toolbarChanging.current, []);
-  const isSheetOpen = isIngredientListOpen || isMoveQueueOpen || isConsumedOpen;
+  const isSheetOpen = isIngredientListOpen || openLocationList !== null || isConsumedOpen;
   const queuedIngredients = queuedIds.flatMap(id => ingredients.find(ingredient => ingredient.id === id) ?? []);
   const hasQueuedIngredients = queuedIngredients.length > 0;
+  const unassignedCount = unassignedIngredients.length;
   const [badgeDate, setBadgeDate] = useState(() => new Date());
 
   useEffect(() => {
@@ -148,14 +153,20 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
     setSelectedSlot(null);
     setIsIngredientListOpen(false);
     setIsLegendOpen(false);
-    setIsMoveQueueOpen(false);
+    setOpenLocationList(null);
     setError(null);
     try {
       const result = await getRefrigerator(db);
-      const storedIngredients = result ? await getIngredients(db) : [];
+      const [storedIngredients, unassigned] = result
+        ? await Promise.all([getIngredients(db), getUnassignedIngredients(db)]) : [[], []];
       if (isCurrent()) {
         setRefrigerator(result);
         setIngredients(storedIngredients);
+        setUnassignedIngredients(unassigned);
+        if (returnToUnassignedList.current) {
+          returnToUnassignedList.current = false;
+          if (unassigned.length) setOpenLocationList('unassigned');
+        }
         retainMoveQueue(storedIngredients.map(ingredient => ingredient.id));
       }
     } catch {
@@ -184,7 +195,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
       setIngredientListIndex(0);
       resetFocus();
       setSelectedSlot(null); setIsIngredientListOpen(false); setIsLegendOpen(false);
-      setIsMoveQueueOpen(false);
+      setOpenLocationList(null);
     };
   }, [cancelLoad, loadRefrigerator, resetFocus, takeIngredientFormResult]));
 
@@ -226,11 +237,10 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
   }, [isToolbarExpanded, toolbarProgress]);
 
   useEffect(() => {
-    if (!activeFocus && !isMoveQueueOpen) return;
+    // 위치 목록이 열린 동안에는 시트에서 선택 해제와 닫기를 처리한다.
+    if (!activeFocus || openLocationList) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (ingredientFormPending.current) return false;
-      // 대기 목록은 시트의 닫기 애니메이션 완료 신호에서만 정리한다.
-      if (isMoveQueueOpen) return true;
       if (toolbarChanging.current) return true;
       if (isLegendOpen) setIsLegendOpen(false);
       else if (isIngredientListOpen) closeIngredientList();
@@ -238,7 +248,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
       return true;
     });
     return () => subscription.remove();
-  }, [activeFocus, closeFocusedArea, closeIngredientList, isIngredientListOpen, isLegendOpen, isMoveQueueOpen]);
+  }, [activeFocus, closeFocusedArea, closeIngredientList, isIngredientListOpen, isLegendOpen, openLocationList]);
 
   const layout = refrigerator ? getDraftLayout(refrigerator, [], t) : null;
   const selectedPosition = layout?.positions.find(position => position.id === selectedSlot?.positionId
@@ -354,17 +364,20 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                       scrollEnabled={canUseToolbar}
                       pointerEvents={canUseToolbar ? 'auto' : 'none'} accessibilityElementsHidden={!canUseToolbar}
                       importantForAccessibility={canUseToolbar ? 'auto' : 'no-hide-descendants'}>
-                      <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('legend.open')}
-                        accessibilityState={{ disabled: !canUseToolbar }} disabled={false} interactionBlocked={!canUseToolbar}
-                        onPress={() => { if (canUseToolbar && !toolbarChanging.current) setIsLegendOpen(true); }}
-                        style={[styles.action, styles.homeAction]} hitSlop={4}>
-                        <MaterialDesignIcons name="map-legend" size={18} color={colors.chilled} accessible={false} />
-                        <Text style={[styles.label, styles.homeLabel]} numberOfLines={1}>{t('legend.label')}</Text>
-                      </FeedbackPressable>
+                        <FeedbackPressable accessibilityRole="button" accessibilityState={{ disabled: !canUseToolbar }}
+                          interactionBlocked={!canUseToolbar}
+                          onPress={() => { if (canUseToolbar && !toolbarChanging.current) setOpenLocationList('unassigned'); }}
+                          style={[styles.action, styles.homeAction]} hitSlop={4}>
+                          <MaterialDesignIcons name="map-marker-alert-outline" size={18} color={colors.chilled} accessible={false} />
+                          <Text style={[styles.label, styles.homeLabel]} numberOfLines={1}>{t('unassigned.label')}</Text>
+                          {unassignedCount > 0 && isToolbarExpanded ? (
+                            <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+                          ) : null}
+                        </FeedbackPressable>
                       <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('queue.open')}
                         accessibilityHint={hasQueuedIngredients ? t('queue.openHint', { count: queuedIngredients.length }) : t('queue.emptyDescription')}
                         accessibilityState={{ disabled: !canUseToolbar }} disabled={false} interactionBlocked={!canUseToolbar}
-                        onPress={() => { if (canUseToolbar && !toolbarChanging.current) setIsMoveQueueOpen(true); }}
+                        onPress={() => { if (canUseToolbar && !toolbarChanging.current) setOpenLocationList('queue'); }}
                         style={[styles.action, styles.homeAction]} hitSlop={4}>
                         <MaterialDesignIcons name="swap-horizontal" size={18} color={colors.chilled} accessible={false} />
                         <Text style={[styles.label, styles.homeLabel]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('queue.pending')}</Text>
@@ -383,11 +396,19 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                           <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
                         ) : null}
                       </FeedbackPressable>
+                      <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('legend.open')}
+                        accessibilityState={{ disabled: !canUseToolbar }} disabled={false} interactionBlocked={!canUseToolbar}
+                        onPress={() => { if (canUseToolbar && !toolbarChanging.current) setIsLegendOpen(true); }}
+                        style={[styles.action, styles.homeAction]} hitSlop={4}>
+                        <MaterialDesignIcons name="map-legend" size={18} color={colors.chilled} accessible={false} />
+                        <Text style={[styles.label, styles.homeLabel]} numberOfLines={1}>{t('legend.label')}</Text>
+                      </FeedbackPressable>
                     </Animated.ScrollView>
                   </MaskedView>
                 </View>
                 <FeedbackPressable accessibilityRole="button" accessibilityLabel={isToolbarExpanded ? t('home.collapseTools') : t('home.expandTools')}
                   accessibilityHint={!isToolbarExpanded ? [
+                    unassignedCount ? t('unassigned.title', { count: unassignedCount }) : '',
                     hasQueuedIngredients ? t('queue.openHint', { count: queuedIngredients.length }) : '',
                     hasUnseenConsumed ? t('consumed.unseenHint') : '',
                   ].filter(Boolean).join(' ') || undefined : undefined}
@@ -397,7 +418,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                   {({ pressed }) => <>
                     <MaterialDesignIcons name={isToolbarExpanded ? 'menu-close' : 'menu-open'} size={HOME_TOOL_ICON_SIZE}
                       color={pressed ? colors.sheetHandle : colors.buttonText} accessible={false} />
-                    {!isToolbarExpanded && (hasQueuedIngredients || hasUnseenConsumed) ? (
+                    {!isToolbarExpanded && (unassignedCount > 0 || hasQueuedIngredients || hasUnseenConsumed) ? (
                       <View style={[styles.toolbarDot, styles.toolbarDotOnToggle]} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
                     ) : null}
                   </>}
@@ -410,8 +431,18 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
           onRecordsLoaded={markConsumedAsSeen}
           onPickRestorePosition={record => navigation.navigate('IngredientRestore', record)} /> : null}
         {isLegendOpen ? <FridgeIngredientLegend onClose={() => setIsLegendOpen(false)} /> : null}
-        {isMoveQueueOpen && layout ? <IngredientMoveQueueSheet ingredients={queuedIngredients} layout={layout}
-          onClose={() => setIsMoveQueueOpen(false)} /> : null}
+        {openLocationList === 'queue' && layout ? <IngredientMoveQueueSheet ingredients={queuedIngredients} layout={layout}
+          onClose={() => setOpenLocationList(null)} /> : null}
+        {openLocationList === 'unassigned' ? <IngredientMoveQueueSheet ingredients={unassignedIngredients}
+          onClose={() => setOpenLocationList(null)}
+          onAssign={ids => {
+            returnToUnassignedList.current = true;
+            navigation.navigate('IngredientAssign', { ids });
+          }}
+          onDelete={async ids => {
+            await deleteUnassignedIngredients(db, ids);
+            setUnassignedIngredients(current => current.filter(item => !ids.includes(item.id)));
+          }} /> : null}
         {isIngredientListOpen && focusPhase === 'open' && selectedPosition && layout ? (
           <IngredientListSheet key={selectedPosition.id} position={selectedPosition} layout={layout} allIngredients={ingredients}
             storageMode={refrigerator?.rows.flatMap(row => row.compartments).find(body => body.id === selectedPosition.areaId || body.doorIds.includes(selectedPosition.areaId))?.storageMode}

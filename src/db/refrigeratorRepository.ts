@@ -5,10 +5,10 @@
  */
 import { uuid } from 'expo';
 import type { SQLiteDatabase } from 'expo-sqlite';
-import { notifyIngredientChanges } from '@/db/ingredientRepository';
+import { getIngredients, notifyIngredientChanges, unassignIngredients } from '@/db/ingredientRepository';
 import { normalizeRefrigeratorName, prepareRefrigeratorRegistration } from '@/db/refrigeratorRegistration';
 import type { RefrigeratorRegistrationData } from '@/db/refrigeratorRegistration';
-import { getSlotName } from '@/features/fridge/model/fridgeLayout';
+import { getIngredientsWithoutPosition, getSlotName } from '@/features/fridge/model/fridgeLayout';
 import type { Refrigerator, RefrigeratorDraft, SlotConfiguration } from '@/features/fridge/model/fridgeLayout';
 import { AppError } from '@/i18n/errors';
 
@@ -26,6 +26,7 @@ export async function deleteRefrigerator(db: SQLiteDatabase, refrigeratorId: str
     // 냉장고는 한 대만 저장된다. 전용 연결의 외래 키 설정과 관계없이 자식부터 제거한다.
     await transaction.execAsync(`
       DELETE FROM ingredients;
+      DELETE FROM unassigned_ingredients;
       DELETE FROM refrigerator_slots;
       DELETE FROM refrigerator_doors;
       DELETE FROM refrigerator_compartments;
@@ -148,12 +149,18 @@ export async function updateRefrigeratorName(db: SQLiteDatabase, refrigeratorId:
   return normalizedName;
 }
 
-/** 기존 ID를 유지해 구성을 수정하고, 사라진 위치만 자식부터 정리한다. */
-export async function updateRefrigerator(db: SQLiteDatabase, refrigeratorId: string, draft: RefrigeratorDraft): Promise<string> {
+/** 확인한 재료를 먼저 보존한 뒤 구성을 수정하고, 사라진 위치만 자식부터 정리한다. */
+export async function updateRefrigerator(db: SQLiteDatabase, refrigeratorId: string, draft: RefrigeratorDraft,
+  confirmedIds: string[]): Promise<void> {
   await db.withExclusiveTransactionAsync(async transaction => {
     const existing = await readRefrigerator(transaction);
     if (!existing || existing.id !== refrigeratorId) throw new AppError('errors.fridgeMissing');
     const data = prepareRefrigeratorRegistration(draft, uuid.v4, existing);
+    const affected = getIngredientsWithoutPosition(draft, await getIngredients(transaction));
+    if (affected.length !== confirmedIds.length || affected.some(item => !confirmedIds.includes(item.id))) {
+      throw new AppError('fridge.unassignedChanged');
+    }
+    await unassignIngredients(transaction, affected);
     const oldBodies = existing.rows.flatMap(row => row.compartments);
     const oldDoors = existing.rows.flatMap(row => row.doors);
     const oldSlots = [...oldBodies, ...oldDoors].flatMap(area => area.slots);
@@ -185,7 +192,7 @@ export async function updateRefrigerator(db: SQLiteDatabase, refrigeratorId: str
     await deleteRemovedRecords(transaction, 'refrigerator_rows', existing.rows.map(row => row.id), data.rows.map(row => row.id));
     await checkForeignKeys(transaction);
   });
-  return refrigeratorId;
+  if (confirmedIds.length) notifyIngredientChanges(db);
 }
 
 /** 등록·수정에서 같은 순서로 부모부터 기록하며 기존 위치는 삭제하지 않고 갱신한다. */

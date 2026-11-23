@@ -11,7 +11,7 @@ import { AndroidImportance, IosAuthorizationStatus } from 'expo-notifications';
 import { useSQLiteContext } from 'expo-sqlite';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import Storage from 'expo-sqlite/kv-store';
-import { getIngredients, subscribeToIngredientChanges } from '@/db/ingredientRepository';
+import { getIngredientExpirationDates, subscribeToIngredientChanges } from '@/db/ingredientRepository';
 import { getExpirationReminderGroups } from '@/features/ingredient/model/expirationReminder';
 import { useTranslation } from '@/i18n/LanguageProvider';
 import { formatDate } from '@/i18n/translations';
@@ -70,7 +70,7 @@ async function prepareChannel(t: Translator) {
 async function syncNotifications(db: SQLiteDatabase, settings: ReminderSettings | null, t: Translator) {
   const pending = await Notifications.getAllScheduledNotificationsAsync();
   const existing = pending.filter(item => item.identifier.startsWith(IDENTIFIER_PREFIX));
-  const groups = settings ? getExpirationReminderGroups(await getIngredients(db), settings.daysBefore, settings.minutes) : [];
+  const groups = settings ? getExpirationReminderGroups(await getIngredientExpirationDates(db), settings.daysBefore, settings.minutes) : [];
   // iOS의 대기 예약 한도 안에서 임박한 날짜부터 예약하고 다른 기능의 예약은 보존한다.
   const limit = Platform.OS === 'ios' ? Math.max(0, 64 - (pending.length - existing.length)) : groups.length;
   const title = t('settings.expirationReminder');

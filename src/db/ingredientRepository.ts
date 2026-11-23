@@ -12,6 +12,16 @@ import { AppError } from '@/i18n/errors';
 
 const ingredientChangeListeners = new Set<(db: SQLiteDatabase) => void>();
 
+/** 칸 ID와 단·열·칸 번호는 도면 변경 전 위치를 표시하는 데만 사용한다. */
+export interface UnassignedIngredient extends Ingredient {
+  rowNumber: number;
+  firstColumn: number;
+  lastColumn: number;
+  doorCount: number;
+  slotNumber: number;
+  isBody: 0 | 1;
+}
+
 /** 예약 알림이 확정된 재료 목록을 다시 읽을 수 있게 저장 완료 시점을 전달한다. */
 export function subscribeToIngredientChanges(listener: (db: SQLiteDatabase) => void) {
   ingredientChangeListeners.add(listener);
@@ -30,6 +40,85 @@ export function getIngredients(db: SQLiteDatabase) {
       slot_id AS slotId, drawer_number AS drawerNumber
     FROM ingredients;
   `);
+}
+
+export function getUnassignedIngredients(db: SQLiteDatabase) {
+  return db.getAllAsync<UnassignedIngredient>(`
+    SELECT id, name, quantity, memo, expiration_date AS expirationDate,
+      slot_id AS slotId, drawer_number AS drawerNumber, row_number AS rowNumber,
+      first_column AS firstColumn, last_column AS lastColumn, door_count AS doorCount,
+      slot_number AS slotNumber, is_body AS isBody
+    FROM unassigned_ingredients
+    ORDER BY row_number, first_column, is_body DESC, slot_number, drawer_number,
+      expiration_date IS NULL, expiration_date, name, id;
+  `);
+}
+
+/** 위치 지정을 기다리는 동안에도 유통기한 알림은 유지한다. */
+export function getIngredientExpirationDates(db: SQLiteDatabase) {
+  return db.getAllAsync<Pick<Ingredient, 'expirationDate'>>(`
+    SELECT expiration_date AS expirationDate FROM ingredients WHERE expiration_date IS NOT NULL
+    UNION ALL
+    SELECT expiration_date AS expirationDate FROM unassigned_ingredients WHERE expiration_date IS NOT NULL;
+  `);
+}
+
+/** 기존 도면의 위치를 기록하고, 구조를 수정하는 트랜잭션 안에서 재료를 분리한다. */
+export async function unassignIngredients(transaction: SQLiteDatabase, ingredients: readonly Ingredient[]) {
+  for (const ingredient of ingredients) {
+    const result = await transaction.runAsync(`
+      INSERT INTO unassigned_ingredients (
+        id, name, quantity, memo, expiration_date, slot_id, drawer_number,
+        row_number, first_column, last_column, door_count, slot_number, is_body
+      )
+      SELECT ingredient.id, ingredient.name, ingredient.quantity, ingredient.memo, ingredient.expiration_date,
+        ingredient.slot_id, ingredient.drawer_number, row.sort_order + 1,
+        COALESCE(door.sort_order, MIN(body_door.sort_order)) + 1,
+        COALESCE(door.sort_order, MAX(body_door.sort_order)) + 1,
+        (SELECT COUNT(*) FROM refrigerator_doors WHERE row_id = row.id),
+        slot.sort_order + 1, slot.compartment_id IS NOT NULL
+      FROM ingredients AS ingredient
+      JOIN refrigerator_slots AS slot ON slot.id = ingredient.slot_id
+      LEFT JOIN refrigerator_doors AS door ON door.id = slot.door_id
+      LEFT JOIN refrigerator_compartments AS body ON body.id = slot.compartment_id
+      JOIN refrigerator_rows AS row ON row.id = COALESCE(body.row_id, door.row_id)
+      LEFT JOIN refrigerator_doors AS body_door ON body_door.compartment_id = body.id
+      WHERE ingredient.id = ? AND ingredient.slot_id = ? AND ingredient.drawer_number = ?
+      GROUP BY ingredient.id;
+    `, ingredient.id, ingredient.slotId, ingredient.drawerNumber);
+    if (result.changes !== 1) throw new AppError('fridge.unassignedChanged');
+    await removeIngredient(transaction, ingredient);
+  }
+}
+
+async function removeUnassignedIngredient(transaction: SQLiteDatabase, id: string) {
+  const result = await transaction.runAsync('DELETE FROM unassigned_ingredients WHERE id = ?;', id);
+  if (result.changes !== 1) throw new AppError('unassigned.missing');
+}
+
+/** 선택한 재료만 기존 ID와 입력값을 유지해 새 칸에 배치한다. */
+export async function assignIngredients(db: SQLiteDatabase, ids: readonly string[],
+  destination: Pick<Ingredient, 'slotId' | 'drawerNumber'>) {
+  await db.withExclusiveTransactionAsync(async transaction => {
+    for (const id of new Set(ids)) {
+      const result = await transaction.runAsync(`
+        INSERT INTO ingredients (id, name, quantity, memo, expiration_date, slot_id, drawer_number)
+        SELECT id, name, quantity, memo, expiration_date, ?, ?
+        FROM unassigned_ingredients WHERE id = ?;
+      `, destination.slotId, destination.drawerNumber, id);
+      if (result.changes !== 1) throw new AppError('unassigned.missing');
+      await removeUnassignedIngredient(transaction, id);
+    }
+  });
+  notifyIngredientChanges(db);
+}
+
+/** 삭제 대상이 바뀌면 선택한 목록 전체를 보존한다. */
+export async function deleteUnassignedIngredients(db: SQLiteDatabase, ids: readonly string[]) {
+  await db.withExclusiveTransactionAsync(async transaction => {
+    for (const id of new Set(ids)) await removeUnassignedIngredient(transaction, id);
+  });
+  notifyIngredientChanges(db);
 }
 
 /** 유통기한이 빠른 재료부터 표시하고, 날짜가 없는 재료는 뒤에 둔다. */

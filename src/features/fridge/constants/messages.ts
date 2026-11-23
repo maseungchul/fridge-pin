@@ -9,5 +9,4 @@ export const fridgeMessages = {
   registrationSuccess: 'fridge.registrationSuccess',
   updateSuccess: 'fridge.updateSuccess',
   saveFailure: 'fridge.saveFailure',
-  ingredientLocationChangeBlocked: 'fridge.ingredientLocationChangeBlocked',
 } as const;

@@ -1,7 +1,7 @@
 /**
  * @file
- * 임시이동목록의 재료를 출발 위치별로 묶어 수량·유통기한과 함께 표시한다.
- * 선택한 항목은 임시이동목록에서만 제거한다.
+ * 이동 대기와 위치 지정 필요 목록의 재료를 출발 위치별로 묶어 표시한다.
+ * 목록 종류에 따라 선택한 재료를 대기 목록에서 빼거나, 삭제·새 위치 지정으로 연결한다.
  */
 import { useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
@@ -17,6 +17,7 @@ import { getIngredientExpirationStatus } from '@/features/ingredient/model/ingre
 import { spacing, createThemedStyles } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useTranslation } from '@/i18n/LanguageProvider';
+import { getErrorMessage } from '@/i18n/errors';
 import { formatDate } from '@/i18n/translations';
 import { COMPACT_HEADER_ICON_INSET, COMPACT_HEADER_ICON_SIZE, getCompactHeaderStyles } from '@/theme/headerStyles';
 
@@ -27,11 +28,12 @@ export function useMoveQueueSelection() {
 
 type QueueSelection = ReturnType<typeof useMoveQueueSelection>;
 
-export function IngredientMoveQueueHeader({ ingredients, selection, disabled, onBack }: {
+export function IngredientMoveQueueHeader({ ingredients, selection, disabled, onBack, unassigned }: {
   ingredients: Ingredient[];
   selection: QueueSelection;
   disabled: boolean;
   onBack?: () => void;
+  unassigned?: boolean;
 }) {
   const { mode, colors } = useAppTheme();
   const styles = getStyles(mode);
@@ -57,7 +59,7 @@ export function IngredientMoveQueueHeader({ ingredients, selection, disabled, on
         </FeedbackPressable>
       </View>
       <Text accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}
-        style={styles.title}>{t('queue.title', { count: ingredients.length })}</Text>
+        style={styles.title}>{t(unassigned ? 'unassigned.title' : 'queue.title', { count: ingredients.length })}</Text>
       <View style={styles.headerRight}>
         {selectedIds ? (
           <FeedbackPressable iconFeedback accessibilityRole="button" accessibilityLabel={t('ingredient.cancelSelection')}
@@ -72,13 +74,16 @@ export function IngredientMoveQueueHeader({ ingredients, selection, disabled, on
 
 interface IngredientMoveQueueListProps {
   ingredients: Ingredient[];
-  layout: FridgeLayout;
+  layout?: FridgeLayout;
   disabled: boolean;
   selection: QueueSelection;
-  onRemove: (id: string) => void;
+  onRemove: (ids: string[]) => void | Promise<void>;
+  onAssign?: (ids: string[]) => void;
+  getSourcePath?: (id: string) => string[] | undefined;
 }
 
-export function IngredientMoveQueueList({ ingredients, layout, disabled, selection, onRemove }: IngredientMoveQueueListProps) {
+export function IngredientMoveQueueList({ ingredients, layout, disabled, selection, onRemove, onAssign,
+  getSourcePath }: IngredientMoveQueueListProps) {
   const { mode, colors, ingredientBadgeColors } = useAppTheme();
   const styles = getStyles(mode);
   const { t } = useTranslation();
@@ -90,31 +95,37 @@ export function IngredientMoveQueueList({ ingredients, layout, disabled, selecti
   function requestRemoval() {
     if (disabled || targets.length === 0 || removalPending.current) return;
     removalPending.current = true;
-    Alert.alert(t('common.warning'), t('queue.deleteSelectedConfirm', { count: targets.length }), [
+    Alert.alert(t('common.warning'), t(onAssign ? 'ingredient.deleteSelectedConfirm' : 'queue.deleteSelectedConfirm', { count: targets.length }), [
       { text: t('common.cancel'), style: 'cancel', onPress: () => { removalPending.current = false; } },
-      { text: t('common.delete'), style: 'destructive', onPress: () => {
+      { text: t('common.delete'), style: 'destructive', onPress: async () => {
         if (!removalPending.current) return;
-        removalPending.current = false;
-        for (const item of targets) onRemove(item.id);
-        setSelectedIds(null);
+        try {
+          await onRemove(targets.map(item => item.id));
+          setSelectedIds(null);
+        } catch (error) {
+          Alert.alert(t('common.error'), getErrorMessage(error, t, t('ingredient.deleteError')), [{ text: t('common.ok') }]);
+        } finally {
+          removalPending.current = false;
+        }
       } },
     ], { cancelable: false });
   }
   const sections: { key: string; title: string; path: string[]; data: Ingredient[] }[] = [];
   for (const ingredient of ingredients) {
-    const position = layout.positions.find(candidate => candidate.slotId === ingredient.slotId
+    const position = layout?.positions.find(candidate => candidate.slotId === ingredient.slotId
       && (candidate.drawerNumber ?? 0) === ingredient.drawerNumber);
-    const area = layout.areas.find(candidate => candidate.id === position?.areaId);
-    const key = `${ingredient.slotId}:${ingredient.drawerNumber}`;
+    const area = layout?.areas.find(candidate => candidate.id === position?.areaId);
+    const sourcePath = getSourcePath?.(ingredient.id);
+    const key = sourcePath?.join(' → ') ?? `${ingredient.slotId}:${ingredient.drawerNumber}`;
     let section = sections.find(candidate => candidate.key === key);
     if (!section) {
       // 문의 이름은 여는 방향이므로 실제 출발 위치는 단·영역 순서로 구분한다.
-      const slotIndex = layout.positions.filter(candidate => candidate.areaId === area?.id)
+      const slotIndex = layout?.positions.filter(candidate => candidate.areaId === area?.id)
         .filter((candidate, index, positions) => positions.findIndex(other => other.slotId === candidate.slotId) === index)
-        .findIndex(candidate => candidate.slotId === position?.slotId);
-      const path = position && area
+        .findIndex(candidate => candidate.slotId === position?.slotId) ?? -1;
+      const path = sourcePath ?? (position && area
         ? [area.compartment, area.isBody ? t('fridge.body') : t('fridge.doorPocket'), getPositionName({ ...position, name: t('fridge.shortSlotName', { index: slotIndex + 1 }) }, t)]
-        : [t('queue.locationMissing')];
+        : [t('queue.locationMissing')]);
       section = { key, title: path.join(' → '), path, data: [] };
       sections.push(section);
     }
@@ -127,7 +138,10 @@ export function IngredientMoveQueueList({ ingredients, layout, disabled, selecti
         showsVerticalScrollIndicator indicatorStyle={mode === 'dark' ? 'white' : 'black'} automaticallyAdjustsScrollIndicatorInsets={false}
         scrollIndicatorInsets={{ top: 0, bottom: spacing.md + (selectedIds ? 0 : insets.bottom), left: 0, right: spacing.xs }}
         style={styles.list} contentContainerStyle={[ingredients.length === 0 ? styles.empty : undefined, { paddingBottom: selectedIds ? 0 : insets.bottom }]}
-        ListEmptyComponent={<EmptyListState message={t('queue.emptyTitle')} description={t('queue.emptyGuide')} />}
+        ListHeaderComponent={onAssign && ingredients.length > 0
+          ? <Text style={styles.guide}>{t('unassigned.guide')}</Text> : undefined}
+        ListEmptyComponent={<EmptyListState message={t(onAssign ? 'unassigned.emptyTitle' : 'queue.emptyTitle')}
+          description={t(onAssign ? 'unassigned.emptyGuide' : 'queue.emptyGuide')} />}
         renderSectionHeader={({ section }) => (
           <View accessible accessibilityRole="header" accessibilityLabel={section.path.join(', ')} style={styles.location}>
             {section.path.map((part, index) => (
@@ -167,7 +181,18 @@ export function IngredientMoveQueueList({ ingredients, layout, disabled, selecti
         }} />
       {selectedIds ? (
         <View style={[styles.selectionToolbar, { height: 50 + insets.bottom, paddingBottom: insets.bottom }]}>
-          <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('queue.deleteSelected')} feedback="none"
+          {onAssign ? (
+            <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('unassigned.choose')} feedback="none"
+              disabled={disabled || targets.length === 0} onPress={() => {
+                if (!removalPending.current) onAssign(targets.map(item => item.id));
+              }} style={styles.selectionAction}>
+              {({ pressed }) => <>
+                <MaterialDesignIcons name="map-marker-outline" size={24} color={pressed ? colors.iconPressed : colors.text} accessible={false} />
+                <Text style={[styles.assignLabel, pressed && { color: colors.iconPressed }]}>{t('unassigned.choose')}</Text>
+              </>}
+            </FeedbackPressable>
+          ) : null}
+          <FeedbackPressable accessibilityRole="button" accessibilityLabel={t(onAssign ? 'ingredient.deleteSelected' : 'queue.deleteSelected')} feedback="none"
             disabled={disabled || targets.length === 0} accessibilityState={{ disabled: disabled || targets.length === 0 }}
             onPress={requestRemoval} style={styles.selectionAction}>
             {({ pressed }) => <>
@@ -188,6 +213,7 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   headerRight: { width: 48, marginRight: -COMPACT_HEADER_ICON_INSET },
   headerButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   list: { flex: 1 },
+  guide: { padding: spacing.md, color: colors.textMuted, fontSize: 14, lineHeight: 21 },
   location: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center',
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.chilledBackground },
   locationPart: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
@@ -201,8 +227,9 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   selectedItem: { backgroundColor: colors.chilledBackground },
   selectionCircleContainer: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
   selectionCircle: { width: 20, height: 20, borderRadius: 10, borderWidth: 1, borderColor: colors.textMuted },
-  selectionToolbar: { flexShrink: 0, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, backgroundColor: colors.surface },
+  selectionToolbar: { flexShrink: 0, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, backgroundColor: colors.surface },
   selectionAction: { flex: 1, minHeight: 48, paddingTop: spacing.xs, alignItems: 'center', justifyContent: 'center' },
   deleteLabel: { color: colors.error, fontSize: 12, lineHeight: 16, fontWeight: '600' },
+  assignLabel: { color: colors.text, fontSize: 12, lineHeight: 16, fontWeight: '600' },
   empty: { flexGrow: 1, justifyContent: 'center' },
 }));

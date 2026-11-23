@@ -25,7 +25,7 @@ export function IngredientMoveQueueProvider({ children }: { children: ReactNode 
     setIngredientIds(current => current.filter(candidate => candidate !== id));
   }, []);
   const clear = useCallback(() => setIngredientIds([]), []);
-  // 홈 재조회에 성공했을 때만 삭제된 재료를 정리하고, 조회 실패로 대기 목록을 비우지 않는다.
+  // 홈 재조회에 성공했을 때만 도면에 보관된 재료로 대기 목록을 정리한다.
   const retain = useCallback((ids: string[]) => {
     setIngredientIds(current => current.filter(id => ids.includes(id)));
   }, []);
