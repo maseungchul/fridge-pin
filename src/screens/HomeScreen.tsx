@@ -368,33 +368,33 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                           interactionBlocked={!canUseToolbar}
                           onPress={() => { if (canUseToolbar && !toolbarChanging.current) setOpenLocationList('unassigned'); }}
                           style={[styles.action, styles.homeAction]} hitSlop={4}>
-                          <MaterialDesignIcons name="map-marker-alert-outline" size={18} color={colors.chilled} accessible={false} />
+                          <View>
+                            <MaterialDesignIcons name="map-marker-alert-outline" size={18} color={colors.chilled} accessible={false} />
+                            {unassignedCount > 0 && isToolbarExpanded ? <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" /> : null}
+                          </View>
                           <Text style={[styles.label, styles.homeLabel]} numberOfLines={1}>{t('unassigned.label')}</Text>
-                          {unassignedCount > 0 && isToolbarExpanded ? (
-                            <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
-                          ) : null}
                         </FeedbackPressable>
                       <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('queue.open')}
                         accessibilityHint={hasQueuedIngredients ? t('queue.openHint', { count: queuedIngredients.length }) : t('queue.emptyDescription')}
                         accessibilityState={{ disabled: !canUseToolbar }} disabled={false} interactionBlocked={!canUseToolbar}
                         onPress={() => { if (canUseToolbar && !toolbarChanging.current) setOpenLocationList('queue'); }}
                         style={[styles.action, styles.homeAction]} hitSlop={4}>
-                        <MaterialDesignIcons name="swap-horizontal" size={18} color={colors.chilled} accessible={false} />
+                        <View>
+                          <MaterialDesignIcons name="swap-horizontal" size={18} color={colors.chilled} accessible={false} />
+                          {hasQueuedIngredients && isToolbarExpanded ? <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" /> : null}
+                        </View>
                         <Text style={[styles.label, styles.homeLabel]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('queue.pending')}</Text>
-                        {hasQueuedIngredients && isToolbarExpanded ? (
-                          <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
-                        ) : null}
                       </FeedbackPressable>
                       <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('consumed.title')}
                         accessibilityHint={hasUnseenConsumed ? t('consumed.unseenHint') : undefined}
                         accessibilityState={{ disabled: !canUseToolbar }} disabled={false} interactionBlocked={!canUseToolbar}
                         onPress={() => { if (canUseToolbar && !toolbarChanging.current) setIsConsumedOpen(true); }}
                         style={[styles.action, styles.homeAction]} hitSlop={4}>
-                        <MaterialDesignIcons name="sticker-check-outline" size={18} color={colors.chilled} accessible={false} />
+                        <View>
+                          <MaterialDesignIcons name="sticker-check-outline" size={18} color={colors.chilled} accessible={false} />
+                          {hasUnseenConsumed && isToolbarExpanded ? <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" /> : null}
+                        </View>
                         <Text style={[styles.label, styles.homeLabel]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('consumed.title')}</Text>
-                        {hasUnseenConsumed && isToolbarExpanded ? (
-                          <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
-                        ) : null}
                       </FeedbackPressable>
                       <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('legend.open')}
                         accessibilityState={{ disabled: !canUseToolbar }} disabled={false} interactionBlocked={!canUseToolbar}
@@ -419,7 +419,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                     <MaterialDesignIcons name={isToolbarExpanded ? 'chevron-right' : 'chevron-left'} size={HOME_TOOL_ICON_SIZE}
                       color={pressed ? colors.sheetHandle : colors.buttonText} accessible={false} />
                     {!isToolbarExpanded && (unassignedCount > 0 || hasQueuedIngredients || hasUnseenConsumed) ? (
-                      <View style={[styles.toolbarDot, styles.toolbarDotOnToggle]} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
+                      <View style={styles.toolbarDotOnToggle} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
                     ) : null}
                   </>}
                 </FeedbackPressable>
@@ -558,9 +558,8 @@ const getStyles = createThemedStyles(({ colors, fridgeDoorColors }, mode) => Sty
     paddingHorizontal: spacing.sm, borderRadius: 20, borderWidth: 0,
     boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 8, color: `${colors.button}1F` }] },
   homeLabel: { color: colors.text, fontSize: HOME_TOOL_LABEL_SIZE },
-  toolbarDot: { position: 'absolute', top: -4, right: -4, width: 8, height: 8, borderRadius: 4,
-    backgroundColor: colors.moveQueueBadge },
-  toolbarDotOnToggle: { right: -1 },
+  toolbarDot: { position: 'absolute', top: -5, right: -3, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.chilled },
+  toolbarDotOnToggle: { position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.noticeForeground },
   floatingButton: { boxShadow: [{ offsetX: 0, offsetY: 2, blurRadius: 8, color: `${colors.button}24` }] },
   toolbarToggle: { zIndex: 1, width: HOME_MENU_SIZE, height: HOME_MENU_SIZE, flexShrink: 0, alignItems: 'center', justifyContent: 'center',
     borderRadius: HOME_MENU_SIZE / 2, backgroundColor: colors.chilledFill },
