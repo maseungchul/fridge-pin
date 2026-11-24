@@ -82,6 +82,8 @@ export function SettingsScreen({ navigation, route }: SettingsScreenProps) {
               <FeedbackPressable key={option} accessibilityRole="radio" accessibilityLabel={t(themes[option])}
                 accessibilityState={{ checked: preference === option, disabled: isChangingTheme }} disabled={isChangingTheme}
                 onPress={() => selectTheme(option)} style={[styles.option, preference === option && styles.selected]}>
+                <MaterialDesignIcons name={option === 'system' ? 'cellphone-cog' : option === 'light' ? 'weather-sunny' : 'weather-night'}
+                  size={20} color={colors.text} accessible={false} />
                 <Text style={styles.optionLabel}>{t(themes[option])}</Text>
                 <SelectionCheck selected={preference === option} />
               </FeedbackPressable>
