@@ -92,6 +92,7 @@ export const ja: Record<keyof typeof ko, string> = {
   'search.placeholder': '食材名で検索',
   'search.clear': '検索語を消去',
   'search.resultCount': '検索結果 {count}件',
+  'search.results': '検索結果',
   'search.noResults': '該当する食材がありません。',
   'home.loading': '冷蔵庫の情報を読み込み中',
   'home.emptyTitle': 'わが家の冷蔵庫を登録しましょう',

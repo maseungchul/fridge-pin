@@ -17,7 +17,6 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { getDraftLayout, getIngredientLocationPath } from '@/features/fridge/model/fridgeLayout';
 import type { Refrigerator } from '@/features/fridge/model/fridgeLayout';
 import { IngredientLocationBreadcrumb } from '@/features/ingredient/components/IngredientLocationBreadcrumb';
-import { getIngredientExpirationStatus } from '@/features/ingredient/model/ingredient';
 import type { Ingredient } from '@/features/ingredient/model/ingredient';
 import { useTranslation } from '@/i18n/LanguageProvider';
 import { useDelayedLoading } from '@/hooks/useDelayedLoading';
@@ -36,8 +35,37 @@ function normalizeSearchText(text: string) {
   return text.trim().normalize('NFKC').toLowerCase();
 }
 
+/** 정규화로 문자 길이가 달라져도 화면에는 원래 재료명을 유지한다. */
+function highlightName(name: string, query: string, styles: ReturnType<typeof getStyles>) {
+  const normalized = normalizeSearchText(name);
+  const ranges: { start: number; end: number }[] = [];
+  let index = normalized.indexOf(query);
+  while (index !== -1) {
+    ranges.push({ start: index, end: index + query.length });
+    index = normalized.indexOf(query, index + query.length);
+  }
+  if (!ranges.length) return <Text style={styles.name}>{name}</Text>;
+  const characters = Array.from(name);
+  const parts: { text: string; matched: boolean }[] = [];
+  let offset = 0;
+  for (const character of characters) {
+    const length = character.normalize('NFKC').toLowerCase().length;
+    const matched = ranges.some(range => offset < range.end && offset + length > range.start);
+    const last = parts[parts.length - 1];
+    if (last?.matched === matched) last.text += character;
+    else parts.push({ text: character, matched });
+    offset += length;
+  }
+  return parts.map((part, partIndex) => (
+    <View key={partIndex} style={styles.namePart}>
+      <Text style={[styles.name, part.matched && styles.highlight]}>{part.text}</Text>
+      {part.matched ? <View pointerEvents="none" style={styles.highlightLine} /> : null}
+    </View>
+  ));
+}
+
 export function IngredientSearchScreen({ navigation, onSelectIngredient }: IngredientSearchScreenProps) {
-  const { mode, colors, ingredientBadgeColors } = useAppTheme();
+  const { mode, colors } = useAppTheme();
   const styles = getStyles(mode);
   const { t } = useTranslation();
   const db = useSQLiteContext();
@@ -129,24 +157,18 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
           <PrimaryButton label={t('common.retry')} onPress={loadIngredients} />
         </View> : !data ? (showLoading ? <ActivityIndicator color={colors.text} accessibilityLabel={t('common.loading')} /> : null)
           : results.length > 0 ? <>
-            <Text style={styles.summary} accessibilityLiveRegion="polite">{t('search.resultCount', { count: results.length })}</Text>
+            <Text style={styles.summary} accessibilityLiveRegion="polite" accessibilityLabel={t('search.resultCount', { count: results.length })}>
+              {t('search.results')} <Text style={styles.resultCount}>{results.length}</Text>
+            </Text>
             <FlatList data={results} keyExtractor={item => item.ingredient.id} style={styles.list}
               keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
               renderItem={({ item: { ingredient, path } }) => {
-                const expiration = getIngredientExpirationStatus(ingredient.expirationDate, new Date(), t);
-                const expirationColor = ingredientBadgeColors[ingredient.expirationDate === null ? 'unknown'
-                  : expiration.isExpired ? 'expired' : expiration.isUrgent ? 'warning' : 'normal'];
                 return (
                   <FeedbackPressable accessibilityRole="button" accessibilityState={{ disabled: isPending }} interactionBlocked={isPending}
                     onPress={() => closeSearch(ingredient.id)}>
                     <IngredientLocationBreadcrumb path={path} />
-                    <View style={styles.result}>
-                      <View style={styles.resultInfo}>
-                        <Text style={styles.name}>{ingredient.name}</Text>
-                        <Text style={styles.detail}>{ingredient.quantity}</Text>
-                      </View>
-                      <Text style={[styles.expiration, { color: expirationColor }]}>{expiration.label}</Text>
-                      <MaterialDesignIcons name="chevron-right" size={20} color={colors.textMuted} accessible={false} />
+                    <View style={styles.result} accessible accessibilityLabel={ingredient.name}>
+                      {highlightName(ingredient.name, searchText, styles)}
                     </View>
                   </FeedbackPressable>
                 );
@@ -167,14 +189,15 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
   list: { flex: 1 },
   feedback: { alignItems: 'center', paddingHorizontal: spacing.md },
-  summary: { color: colors.textMuted, fontSize: 13, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  summary: { color: colors.text, fontSize: 15, fontWeight: '600', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  resultCount: { color: colors.chilled },
   empty: { color: colors.textMuted, textAlign: 'center', padding: spacing.lg },
-  result: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  resultInfo: { flex: 1, minWidth: 0, gap: spacing.xs },
-  name: { color: colors.text, fontSize: 16, fontWeight: '600' },
-  detail: { color: colors.textMuted, fontSize: 13 },
-  expiration: { fontSize: 13, fontVariant: ['tabular-nums'] },
+  result: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  name: { color: colors.text, fontSize: 16 },
+  namePart: { position: 'relative', flexShrink: 1 },
+  highlight: { fontWeight: '700', color: colors.chilled },
+  highlightLine: { position: 'absolute', left: 0, right: 0, bottom: -3, height: 1.5, borderRadius: 1, backgroundColor: colors.chilled },
   searchBar: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingLeft: spacing.sm,
     backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
   input: { flex: 1, minHeight: 46, color: colors.text, fontSize: 16, paddingRight: spacing.sm, paddingVertical: spacing.xs },

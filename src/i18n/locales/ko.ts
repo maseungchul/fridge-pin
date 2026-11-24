@@ -90,6 +90,7 @@ export const ko = {
   'search.placeholder': '재료 이름 검색',
   'search.clear': '검색어 지우기',
   'search.resultCount': '검색 결과 {count}개',
+  'search.results': '검색 결과',
   'search.noResults': '검색 결과가 없어요.',
   'home.loading': '냉장고 정보 불러오는 중',
   'home.emptyTitle': '우리 집 냉장고를 등록해 보세요.',
