@@ -7,7 +7,9 @@ import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { createThemedStyles, spacing } from '@/theme/tokens';
 
-export function IngredientLocationBreadcrumb({ path, sectionHeader = false }: { path: readonly string[]; sectionHeader?: boolean }) {
+export function IngredientLocationBreadcrumb({ path, sectionHeader = false }: {
+  path: readonly string[]; sectionHeader?: boolean;
+}) {
   const { mode, colors } = useAppTheme();
   const styles = getStyles(mode);
 
@@ -26,7 +28,7 @@ export function IngredientLocationBreadcrumb({ path, sectionHeader = false }: { 
 
 const getStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   location: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center',
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.chilledBackground },
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs, backgroundColor: colors.chilledBackground },
   part: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
   text: { color: colors.chilled, fontSize: 14, lineHeight: 21, fontWeight: '600', flexShrink: 1 },
 }));
