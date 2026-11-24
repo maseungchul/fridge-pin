@@ -134,7 +134,7 @@ export function FridgeAreaMenu({ disabled, activeCategory, onCategoryChange, sho
               accessibilityState={{ disabled: unavailable, expanded }} disabled={unavailable}
               onPress={() => onCategoryChange(expanded ? null : category.id)} feedback="none" style={styles.action}>
               {({ pressed }) => {
-                const color = expanded ? colors.chilled : pressed ? colors.iconPressed : colors.text;
+                const color = pressed ? colors.iconPressed : expanded ? colors.chilled : colors.text;
                 return <>
                   <MaterialDesignIcons name={category.icon} size={24} color={color} accessible={false} />
                   <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}
