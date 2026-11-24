@@ -218,6 +218,12 @@ export function FridgeMap({
                           const badges = counts.total > 0 ? (
                             <IngredientCountBadges counts={counts} placement="top-left" direction="horizontal" style={styles.ingredientBadges} />
                           ) : null;
+                          const marker = position.id === markedPositionId ? (
+                            <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.locationMarker}>
+                              <MaterialDesignIcons name="map-marker-radius-outline" size={36} color={theme.colors.chilled} accessible={false}
+                                style={styles.locationMarkerIcon} />
+                            </View>
+                          ) : null;
                           return (
                             <Position key={position.id} accessible={rowInteraction || positionInteraction ? undefined : false}
                               accessibilityRole={rowInteraction || positionInteraction ? 'button' : undefined} accessibilityLabel={`${getPositionPath(area, position, t)}${countLabel}`}
@@ -238,13 +244,8 @@ export function FridgeMap({
                               {area.isBody ? badges : <DoorPocketBin style={pocketTheme} selectionStyle={slotSelection}
                                 selected={slotInteraction && selectedSlotIndex === slotIndex} disabled={disabled}
                                 label={slotInteraction ? `${slotLabel}${countLabel}` : undefined}
-                                onSelect={slotInteraction ? () => onSelectSlot?.(slotIndex, firstPosition.id) : undefined}>{badges}</DoorPocketBin>}
-                              {position.id === markedPositionId ? (
-                                <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.locationMarker}>
-                                  <MaterialDesignIcons name="map-marker-radius-outline" size={36} color={theme.colors.chilled} accessible={false}
-                                    style={styles.locationMarkerIcon} />
-                                </View>
-                              ) : null}
+                                onSelect={slotInteraction ? () => onSelectSlot?.(slotIndex, firstPosition.id) : undefined}>{badges}{marker}</DoorPocketBin>}
+                              {area.isBody ? marker : null}
                               {selected && positionInteraction && !selectedAreaId ? (
                                 <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
                                   style={positionSelection} />
