@@ -157,9 +157,11 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
           <PrimaryButton label={t('common.retry')} onPress={loadIngredients} />
         </View> : !data ? (showLoading ? <ActivityIndicator color={colors.text} accessibilityLabel={t('common.loading')} /> : null)
           : results.length > 0 ? <>
-            <Text style={styles.summary} accessibilityLiveRegion="polite" accessibilityLabel={t('search.resultCount', { count: results.length })}>
-              {t('search.results')} <Text style={styles.resultCount}>{results.length}</Text>
-            </Text>
+            <View style={styles.summary} accessible accessibilityRole="header" accessibilityLiveRegion="polite"
+              accessibilityLabel={t('search.resultCount', { count: results.length })}>
+              <Text style={styles.summaryLabel}>{t('search.results')}</Text>
+              <View style={styles.countBadge}><Text style={styles.resultCount}>{results.length}</Text></View>
+            </View>
             <FlatList data={results} keyExtractor={item => item.ingredient.id} style={styles.list}
               keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
               renderItem={({ item: { ingredient, path } }) => {
@@ -189,8 +191,11 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
   list: { flex: 1 },
   feedback: { alignItems: 'center', paddingHorizontal: spacing.md },
-  summary: { color: colors.text, fontSize: 15, fontWeight: '600', paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  resultCount: { color: colors.chilled },
+  summary: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  summaryLabel: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+  countBadge: { minWidth: 22, minHeight: 22, paddingHorizontal: spacing.xs, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.border },
+  resultCount: { color: colors.text, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
   empty: { color: colors.textMuted, textAlign: 'center', padding: spacing.lg },
   result: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', paddingHorizontal: spacing.md,
     paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
