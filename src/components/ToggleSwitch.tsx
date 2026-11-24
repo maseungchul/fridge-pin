@@ -5,6 +5,7 @@
  */
 import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import Animated, { interpolateColor, ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { FeedbackPressable } from '@/components/FeedbackPressable';
 import { useAppTheme } from '@/theme/ThemeProvider';
@@ -41,6 +42,7 @@ export function ToggleSwitch({ accessibilityLabel, value, disabled = false, onVa
     <FeedbackPressable accessibilityRole="switch" accessibilityLabel={accessibilityLabel}
       accessibilityState={{ checked: value, disabled }} disabled={disabled}
       hitSlop={{ top: 2, bottom: 2 }}
+      onPressIn={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); }}
       onPress={() => onValueChange(!value)} style={styles.touchTarget}>
       <Animated.View pointerEvents="none" style={[styles.track, trackStyle]}>
         <Animated.View style={[styles.thumb, { backgroundColor: colors.surface }, thumbStyle]} />
