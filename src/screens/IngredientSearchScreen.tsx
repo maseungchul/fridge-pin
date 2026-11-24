@@ -201,7 +201,7 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   result: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', paddingHorizontal: spacing.md,
     paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   name: { color: colors.text, fontSize: 16 },
-  quantity: { color: colors.textMuted, fontSize: 14, marginLeft: spacing.sm },
+  quantity: { color: colors.text, fontSize: 14, marginLeft: spacing.sm },
   namePart: { position: 'relative', flexShrink: 1 },
   highlight: { fontWeight: '700', color: colors.chilled },
   highlightLine: { position: 'absolute', left: 0, right: 0, bottom: -3, height: 1.5, borderRadius: 1, backgroundColor: colors.chilled },
