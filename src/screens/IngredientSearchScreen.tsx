@@ -169,8 +169,9 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
                   <FeedbackPressable accessibilityRole="button" accessibilityState={{ disabled: isPending }} interactionBlocked={isPending}
                     onPress={() => closeSearch(ingredient.id)}>
                     <IngredientLocationBreadcrumb path={path} />
-                    <View style={styles.result} accessible accessibilityLabel={ingredient.name}>
+                    <View style={styles.result} accessible accessibilityLabel={`${ingredient.name}, ${ingredient.quantity}`}>
                       {highlightName(ingredient.name, searchText, styles)}
+                      <Text style={styles.quantity}>{ingredient.quantity}</Text>
                     </View>
                   </FeedbackPressable>
                 );
@@ -200,6 +201,7 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   result: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', paddingHorizontal: spacing.md,
     paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   name: { color: colors.text, fontSize: 16 },
+  quantity: { color: colors.textMuted, fontSize: 14, marginLeft: spacing.sm },
   namePart: { position: 'relative', flexShrink: 1 },
   highlight: { fontWeight: '700', color: colors.chilled },
   highlightLine: { position: 'absolute', left: 0, right: 0, bottom: -3, height: 1.5, borderRadius: 1, backgroundColor: colors.chilled },
