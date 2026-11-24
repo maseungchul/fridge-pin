@@ -208,13 +208,14 @@ function SelectionFrame({ storageMode, style }: { storageMode: StorageMode | nul
 }
 
 /** 열린 본체에는 보관 모드의 공간 이름을, 문 수납에는 도어포켓 이름만 표시한다. */
-function InteriorArea({ area, layout, now, compact, selected, storageMode, cornerStyle, onSelectArea, selectedSlotIndex, selectedPositionId, onSelectSlot, disabled = false }: {
+function InteriorArea({ area, layout, now, compact, selected, storageMode, cornerStyle, onSelectArea, selectedSlotIndex, selectedPositionId, markedPositionId, onSelectSlot, disabled = false }: {
   area: StorageArea; layout: FridgeLayout; compact: boolean; selected: boolean;
   now?: Date;
   storageMode: StorageMode | null; onSelectArea?: FridgeInteriorMapProps['onSelectArea'];
   cornerStyle?: ViewStyle;
   selectedSlotIndex?: number;
   selectedPositionId?: string;
+  markedPositionId?: string;
   onSelectSlot?: (index: number, positionId?: string) => void;
   disabled?: boolean;
 }) {
@@ -238,7 +239,7 @@ function InteriorArea({ area, layout, now, compact, selected, storageMode, corne
         ingredients={layout.ingredients} now={now} selectedAreaId={onSelectArea && selected ? area.id : undefined} showIngredientCounts={!onSelectArea}
         showAreaLabels={false} minAreaHeight={0} fitHeight storageMode={storageMode} cornerStyle={cornerStyle}
         compact={compact} style={styles.areaMap} areaHeader={header}
-        selectedSlotIndex={selectedSlotIndex} selectedPositionId={selectedPositionId} onSelectSlot={onSelectSlot}
+        selectedSlotIndex={selectedSlotIndex} selectedPositionId={selectedPositionId} markedPositionId={markedPositionId} onSelectSlot={onSelectSlot}
         disabled={disabled}
         onSelectArea={onSelectArea ? () => onSelectArea(area.id) : undefined} />}
       {selected && onSelectArea ? <SelectionFrame storageMode={storageMode} style={[StyleSheet.absoluteFill, cornerStyle]} /> : null}
@@ -538,7 +539,7 @@ function FridgeScrollHint({ enabled, viewport, onSeen }: {
 /** 연결된 문은 함께 펼치고, 홈은 칸 선택·등록과 편집은 영역 선택을 호출자에게 전달한다. */
 export function FridgeFocusView({ draft, target, viewport, overlayHeight, phase, selectedAreaId,
   scrollHintEnabled = false, scrollHintBlocked = false, onScrollHintSeen, onPhaseChange, onClose, onSelectArea,
-  selectedSlotIndex, selectedPositionId, onSelectSlot, sizeViewport, ingredients, now, flushVerticalEdges = false, doorGaps = true }: {
+  selectedSlotIndex, selectedPositionId, markedPositionId, onSelectSlot, sizeViewport, ingredients, now, flushVerticalEdges = false, doorGaps = true }: {
   draft: FridgeInteriorMapProps['draft']; target: FridgeFocusTarget; viewport: LayoutRectangle; phase: FridgeFocusPhase;
   ingredients?: Ingredient[];
   now?: Date;
@@ -551,6 +552,7 @@ export function FridgeFocusView({ draft, target, viewport, overlayHeight, phase,
   onSelectArea?: FridgeInteriorMapProps['onSelectArea'];
   selectedSlotIndex?: number;
   selectedPositionId?: string;
+  markedPositionId?: string;
   onSelectSlot?: (areaId: string, index: number, positionId?: string) => void;
 }) {
   const theme = useAppTheme();
@@ -721,6 +723,7 @@ export function FridgeFocusView({ draft, target, viewport, overlayHeight, phase,
             importantForAccessibility={open ? 'auto' : 'no-hide-descendants'} style={StyleSheet.absoluteFill}>
             <InteriorArea area={area} layout={layout} now={now} selected={selectedAreaId === area.id} storageMode={group.body.storageMode}
               selectedPositionId={selectedAreaId === area.id ? selectedPositionId : undefined}
+              markedPositionId={markedPositionId}
               selectedSlotIndex={selectedAreaId === area.id ? selectedSlotIndex : undefined} disabled={!onSelectArea && !open}
               onSelectSlot={onSelectSlot && (!onSelectArea || open && selectedSlotIndex !== undefined)
                 ? (index, positionId) => { if (open) onSelectSlot(area.id, index, positionId); } : undefined}
@@ -742,6 +745,7 @@ export function FridgeFocusView({ draft, target, viewport, overlayHeight, phase,
                 paddingLeft: frame.paddingLeft, paddingRight: frame.paddingRight, paddingVertical: 0 }}>
               {pocket ? <InteriorArea area={layout.areas.find(candidate => candidate.id === door.id)!} layout={layout} now={now}
                 selected={selectedAreaId === door.id} storageMode={group.body.storageMode} compact={pocket.frame.width < 120}
+                markedPositionId={markedPositionId}
                 selectedSlotIndex={!onSelectArea && selectedAreaId === door.id ? selectedSlotIndex : undefined} disabled={!onSelectArea && !open}
                 onSelectSlot={!onSelectArea && onSelectSlot ? (index, positionId) => { if (open) onSelectSlot(door.id, index, positionId); } : undefined}
                 cornerStyle={doorGaps ? HOME_DOOR_CORNERS : getGridCorners(gridEdges, true)} onSelectArea={onSelectArea} /> : null}

@@ -92,6 +92,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
   const [ingredientListIndex, setIngredientListIndex] = useState(0);
   const [isLegendOpen, setIsLegendOpen] = useState(false);
   const [searchPosition, setSearchPosition] = useState<Pick<Ingredient, 'slotId' | 'drawerNumber'> | null>(null);
+  const [markedPositionId, setMarkedPositionId] = useState<string | null>(null);
   const [isConsumedOpen, setIsConsumedOpen] = useState(false);
   const [hasUnseenConsumed, setHasUnseenConsumed] = useState<boolean | null>(null);
   const consumedBadgeWrite = useRef(Promise.resolve());
@@ -141,7 +142,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
   const finishHomeFocus = useCallback((phase: FridgeFocusPhase) => {
     finishFocusTransition(phase);
     if (phase === 'open') setSearchPosition(null);
-    if (phase === 'closed') { setSelectedSlot(null); setIsIngredientListOpen(false); }
+    if (phase === 'closed') { setSelectedSlot(null); setIsIngredientListOpen(false); setMarkedPositionId(null); }
   }, [finishFocusTransition]);
   // 시트 종료 후 패널과 선택 상태를 함께 비운다.
   const closeIngredientList = useCallback(() => {
@@ -177,6 +178,9 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
           const ingredient = storedIngredients.find(item => item.id === searchedId);
           if (ingredient) {
             setSearchPosition({ slotId: ingredient.slotId, drawerNumber: ingredient.drawerNumber });
+            const position = getDraftLayout(result, []).positions.find(item => item.slotId === ingredient.slotId
+              && (item.drawerNumber ?? 0) === ingredient.drawerNumber);
+            setMarkedPositionId(position?.id ?? null);
           } else if (unassigned.some(item => item.id === searchedId)) {
             setOpenLocationList('unassigned');
           }
@@ -209,7 +213,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
       setIngredientListIndex(0);
       resetFocus();
       setSelectedSlot(null); setIsIngredientListOpen(false); setIsLegendOpen(false);
-      setSearchPosition(null);
+      setSearchPosition(null); setMarkedPositionId(null);
       setOpenLocationList(null);
     };
   }, [cancelLoad, loadRefrigerator, resetFocus, takeIngredientFormResult]));
@@ -358,9 +362,11 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                 selectedAreaId={selectedAreaId ?? undefined} scrollHintEnabled={!hasSeenScrollHint}
                 selectedSlotIndex={selectedSlot?.index ?? focusedSlotIndex}
                 selectedPositionId={selectedSlot ? selectedSlot.positionId : focusedPosition?.id}
+                markedPositionId={focusPhase === 'open' ? markedPositionId ?? undefined : undefined}
                 scrollHintBlocked={isOverlayOpen || isToolbarChanging}
                 onSelectSlot={(areaId, index, positionId) => {
                   if (focusPhase !== 'open' || isOverlayOpen || toolbarChanging.current) return;
+                  setMarkedPositionId(null);
                   setSelectedAreaId(areaId);
                   setSelectedSlot({ index, positionId });
                   setIsIngredientListOpen(!!layout?.positions.some(position => position.id === positionId && position.areaId === areaId));

@@ -170,8 +170,11 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
                     onPress={() => closeSearch(ingredient.id)}>
                     <IngredientLocationBreadcrumb path={path} />
                     <View style={styles.result} accessible accessibilityLabel={`${ingredient.name}, ${ingredient.quantity}`}>
-                      {highlightName(ingredient.name, searchText, styles)}
-                      <Text style={styles.quantity}>{ingredient.quantity}</Text>
+                      <View style={styles.resultText}>
+                        {highlightName(ingredient.name, searchText, styles)}
+                        <Text style={styles.quantity}>{ingredient.quantity}</Text>
+                      </View>
+                      <MaterialDesignIcons name="map-marker-right-outline" size={22} color={colors.textMuted} accessible={false} />
                     </View>
                   </FeedbackPressable>
                 );
@@ -198,8 +201,9 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', backgroundColor: colors.border },
   resultCount: { color: colors.text, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
   empty: { color: colors.textMuted, textAlign: 'center', padding: spacing.lg },
-  result: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', paddingHorizontal: spacing.md,
+  result: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md,
     paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  resultText: { flex: 1, minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' },
   name: { color: colors.text, fontSize: 16 },
   quantity: { color: colors.text, fontSize: 14, marginLeft: spacing.sm },
   namePart: { position: 'relative', flexShrink: 1 },

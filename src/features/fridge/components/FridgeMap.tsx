@@ -56,6 +56,7 @@ interface FridgeMapProps {
   now?: Date;
   // 부모가 관리하는 선택 상태다. 이 컴포넌트 내부에 별도 선택 상태를 만들지 않는다.
   selectedPositionId?: string;
+  markedPositionId?: string;
   // 등록 미리보기에서 사용한다. 지정하면 개별 칸 대신 해당 영역의 모든 칸을 선택 표시한다.
   selectedAreaId?: string;
   // 배경과 선택 테두리·본체 접근성 라벨에 보관 모드를 반영한다.
@@ -150,7 +151,7 @@ function DoorPocketBin({ style, selectionStyle, selected = false, disabled = fal
 export function FridgeMap({
   areas, positions, ingredients, now, selectedPositionId, selectedAreaId, storageMode, cornerStyle, showIngredientCounts = true,
   showAreaLabels = true, minAreaHeight = 240, fitHeight = false, compact = false, style, areaHeader, disabled = false, onSelectPosition, onSelectArea,
-  selectedSlotIndex, onSelectSlot,
+  selectedSlotIndex, onSelectSlot, markedPositionId,
 }: FridgeMapProps) {
   const theme = useAppTheme();
   const { mode, fridgeDoorColors, fridgeSurfaces } = theme;
@@ -238,6 +239,12 @@ export function FridgeMap({
                                 selected={slotInteraction && selectedSlotIndex === slotIndex} disabled={disabled}
                                 label={slotInteraction ? `${slotLabel}${countLabel}` : undefined}
                                 onSelect={slotInteraction ? () => onSelectSlot?.(slotIndex, firstPosition.id) : undefined}>{badges}</DoorPocketBin>}
+                              {position.id === markedPositionId ? (
+                                <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={styles.locationMarker}>
+                                  <MaterialDesignIcons name="map-marker-radius-outline" size={36} color={theme.colors.chilled} accessible={false}
+                                    style={styles.locationMarkerIcon} />
+                                </View>
+                              ) : null}
                               {selected && positionInteraction && !selectedAreaId ? (
                                 <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
                                   style={positionSelection} />
@@ -262,6 +269,8 @@ export function FridgeMap({
 }
 
 const getStyles = createThemedStyles(({ colors, fridgeSurfaces }) => StyleSheet.create({
+  locationMarker: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
+  locationMarkerIcon: { lineHeight: 36, includeFontPadding: false, textAlign: 'center', textAlignVertical: 'center' },
   ingredientBadges: { top: INGREDIENT_BADGE_INSET, left: INGREDIENT_BADGE_INSET, right: INGREDIENT_BADGE_INSET, bottom: INGREDIENT_BADGE_INSET },
   modeArt: {
     position: 'absolute',
