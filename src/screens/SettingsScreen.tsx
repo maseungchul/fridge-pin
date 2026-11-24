@@ -71,6 +71,8 @@ export function SettingsScreen({ navigation, route }: SettingsScreenProps) {
                 accessibilityLanguage={option === 'ko' ? 'ko-KR' : 'ja-JP'}
                 accessibilityState={{ checked: language === option, disabled: isChangingLanguage }} disabled={isChangingLanguage}
                 onPress={() => selectLanguage(option)} style={[styles.option, language === option && styles.selected]}>
+                <MaterialDesignIcons name={option === 'ko' ? 'syllabary-hangul' : 'syllabary-hiragana'}
+                  size={20} color={colors.text} accessible={false} />
                 <Text style={styles.optionLabel}>{languageNames[option]}</Text>
                 <SelectionCheck selected={language === option} />
               </FeedbackPressable>
