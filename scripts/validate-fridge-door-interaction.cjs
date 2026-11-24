@@ -41,6 +41,7 @@ const repository = {
 };
 const ingredientRepository = {
   async getIngredients() { return []; },
+  async getUnassignedIngredients() { return []; },
   async getIngredientsByPosition() { return []; },
   async registerIngredient() { throw new Error('재료 등록 동작을 지정하지 않았습니다.'); },
   async updateIngredient() { throw new Error('재료 수정 동작을 지정하지 않았습니다.'); },
@@ -81,6 +82,14 @@ const hooks = {
     const previous = current.slots[index];
     if (!previous || dependencies.some((value, i) => !Object.is(value, previous.dependencies[i]))) {
       current.slots[index] = { value: callback, dependencies };
+    }
+    return current.slots[index].value;
+  },
+  useMemo(factory, dependencies) {
+    const index = current.cursor++;
+    const previous = current.slots[index];
+    if (!previous || dependencies.some((value, i) => !Object.is(value, previous.dependencies[i]))) {
+      current.slots[index] = { value: factory(), dependencies };
     }
     return current.slots[index].value;
   },
@@ -184,6 +193,8 @@ let delayedLoadingModule;
 let centeredPickerPopupModule;
 let pickerWheelModule;
 let pickerAutoSaveModule;
+let searchScreenModule;
+let locationBreadcrumbModule;
 const swiftUIModifiers = Object.fromEntries([
   'accessibilityHidden', 'accessibilityHint', 'accessibilityLabel', 'accessibilityValue', 'buttonBorderShape', 'buttonStyle', 'controlSize',
   'disabled', 'environment', 'frame', 'tint', 'interactiveDismissDisabled',
@@ -262,6 +273,8 @@ function loadComponent(path, overrides = {}) {
     '@/db/shoppingRepository': shoppingRepository,
     '@/db/DatabaseProvider': { DatabaseProvider: 'DatabaseProvider' },
     '@/features/ingredient/components/IngredientListSheet': { IngredientListSheet: 'IngredientListSheet' },
+    '@/screens/IngredientSearchScreen': searchScreenModule,
+    '@/features/ingredient/components/IngredientLocationBreadcrumb': locationBreadcrumbModule,
     '@/features/shopping/components/PurchasedItemPicker': { PurchasedItemPicker: 'PurchasedItemPicker' },
     '@/features/shopping/components/ShoppingItemRow': { ShoppingItemRow: 'ShoppingItemRow' },
     '@/hooks/useDelayedLoading': delayedLoadingModule,
@@ -325,6 +338,7 @@ toolbarStylesModule = loadComponent('src/features/fridge/components/fridgeToolba
 interiorModule = loadComponent('src/features/fridge/components/FridgeInteriorMap.tsx');
 structureModule = loadComponent('src/features/fridge/components/FridgeStructurePreview.tsx');
 moveQueueModule = loadComponent('src/features/ingredient/IngredientMoveQueueProvider.tsx');
+locationBreadcrumbModule = loadComponent('src/features/ingredient/components/IngredientLocationBreadcrumb.tsx');
 moveQueueListModule = loadComponent('src/features/ingredient/components/IngredientMoveQueueList.tsx');
 const inactiveQueueSelection = { selectedIds: null, setSelectedIds() {} };
 let queueProvider;
@@ -354,6 +368,7 @@ const { FridgeInteriorMap, FridgeFocusView, getFridgeFocusGeometry } = interiorM
 menuModule = loadComponent('src/features/fridge/components/FridgeAreaMenu.tsx');
 const { FridgeAreaMenu, FRIDGE_MENU_RESERVED_SPACE } = menuModule;
 const { RefrigeratorRegistrationScreen } = loadComponent('src/screens/RefrigeratorRegistrationScreen.tsx');
+searchScreenModule = loadComponent('src/screens/IngredientSearchScreen.tsx');
 const { HomeScreen } = loadComponent('src/screens/HomeScreen.tsx');
 const { Toast } = loadComponent('src/components/Toast.tsx');
 const { IngredientListSheet } = loadComponent('src/features/ingredient/components/IngredientListSheet.tsx');
@@ -361,6 +376,105 @@ const { IngredientFormScreen } = loadComponent('src/screens/IngredientFormScreen
 const { ConsumedIngredientsScreen } = loadComponent('src/screens/ConsumedIngredientsScreen.tsx');
 const { IngredientPositionScreen } = loadComponent('src/screens/IngredientPositionScreen.tsx');
 const { IngredientExpirationCalendar } = loadComponent('src/features/ingredient/components/IngredientExpirationCalendar.tsx');
+
+test('홈 재료 검색은 전용 화면에서 결과를 표시하고 선택한 분할 칸이나 위치 미지정 목록을 연다', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const previousGet = repository.getRefrigerator;
+  const previousIngredients = { ...ingredientRepository };
+  t.after(() => { repository.getRefrigerator = previousGet; Object.assign(ingredientRepository, previousIngredients); });
+  const refrigerator = savedRefrigerator('검색할 냉장고');
+  const body = refrigerator.rows[0].compartments[0];
+  const slot = body.slots[0];
+  slot.drawerCount = 2;
+  const milk = { id: 'milk', name: '딸기우유', quantity: '1개', memo: null, expirationDate: null, slotId: slot.id, drawerNumber: 2 };
+  repository.getRefrigerator = async () => refrigerator;
+  ingredientRepository.getIngredients = async () => [milk, { ...milk, id: 'cucumber', name: '오이' }];
+  ingredientRepository.getUnassignedIngredients = async () => [{ ...milk, id: 'unassigned', name: '멸균우유' }];
+  let destination;
+  let selectedId = null;
+  const home = mount(HomeScreen, {
+    navigation: { navigate(name) { destination = name; home.focusCleanup(); } },
+    takeIngredientSearchResult() { const id = selectedId; selectedId = null; return id; },
+  });
+  t.after(() => home.unmount());
+  await new Promise(setImmediate); home.render();
+  const viewport = find(home.tree, node => node.type === 'View' && node.props.ref && node.props.onLayout);
+  viewport.props.ref.current = { measureInWindow: callback => callback(0, 0, 375, 844) };
+  const openSearch = async () => {
+    find(home.tree, node => node.props.accessibilityLabel === '재료 검색').props.onPress(); home.render();
+    assert.equal(destination, 'IngredientSearch');
+    let endTransition;
+    const panel = mount(searchScreenModule.IngredientSearchScreen, {
+      navigation: {
+        goBack() { destination = null; home.focus(); },
+        addListener(event, callback) {
+          assert.equal(event, 'transitionEnd');
+          endTransition = callback;
+          return () => { endTransition = undefined; };
+        },
+      },
+      onSelectIngredient(id) { selectedId = id; },
+    });
+    t.after(() => panel.unmount());
+    await new Promise(setImmediate); panel.render();
+    const { props: input } = find(panel.tree, node => node.type === 'TextInput');
+    assert.equal(input.keyboardAppearance, 'light');
+    assert.equal(input.autoFocus, native.Platform.OS !== 'ios');
+    if (endTransition) {
+      let focusCount = 0;
+      input.ref.current = { focus: () => { focusCount++; } };
+      endTransition({ data: { closing: true } });
+      assert.equal(focusCount, 0);
+      endTransition({ data: { closing: false } });
+      assert.equal(focusCount, 1);
+    }
+    return panel;
+  };
+  const changeQuery = (panel, query) => {
+    find(panel.tree, node => node.type === 'TextInput').props.onChangeText(query); panel.render();
+  };
+  const results = panel => find(panel.tree, node => node.type === 'FlatList');
+  const panel = await openSearch();
+  changeQuery(panel, '오이');
+  t.mock.timers.tick(100);
+  changeQuery(panel, ' 우유 ');
+  t.mock.timers.tick(249); panel.render();
+  assert.equal(results(panel), undefined);
+  t.mock.timers.tick(1); panel.render();
+  assert.deepEqual(results(panel).props.data.map(item => item.ingredient.id).sort(), ['milk', 'unassigned']);
+  const placed = results(panel).props.data.find(item => item.ingredient.id === milk.id);
+  assert.deepEqual(placed.path, ['1단', '본체', '1번째 칸 · 오른쪽']);
+  results(panel).props.renderItem({ item: placed }).props.onPress();
+  await new Promise(setImmediate); home.render();
+  assert.equal(destination, null);
+
+  const mapProps = find(home.tree, named('FridgeInteriorMap')).props;
+  const map = mount(FridgeInteriorMap, mapProps);
+  t.after(() => map.unmount());
+  mapCanvas(map).props.ref.current = { measureInWindow: callback => callback(52, 130, 270, 540) };
+  map.tree.props.onLayout({ nativeEvent: { layout: { width: 375, height: 700 } } }); map.render(); home.render();
+  const focus = () => find(home.tree, named('FridgeFocusView'));
+  assert.equal(focus().props.target.areaId, body.id);
+  assert.equal(focus().props.selectedPositionId, `${slot.id}-right`);
+  assert.equal(focus().props.selectedSlotIndex, 0);
+  focus().props.onPhaseChange('open'); home.render();
+  assert.equal(find(home.tree, node => node.type === 'IngredientListSheet'), undefined);
+  focus().props.onClose(); home.render();
+  focus().props.onPhaseChange('closed'); home.render();
+
+  const dismissible = await openSearch();
+  find(dismissible.tree, node => node.props.accessibilityLabel === '냉장고로 돌아가기').props.onPress();
+  await new Promise(setImmediate); home.render();
+  assert.equal(destination, null);
+  assert.equal(find(home.tree, named('FridgeFocusView')), undefined);
+  const unassignedPanel = await openSearch();
+  changeQuery(unassignedPanel, '멸균');
+  t.mock.timers.tick(250); unassignedPanel.render();
+  const list = results(unassignedPanel);
+  list.props.renderItem({ item: list.props.data[0] }).props.onPress();
+  await new Promise(setImmediate); home.render();
+  assert.equal(find(home.tree, node => node.type === 'IngredientMoveQueueSheet').props.ingredients[0].id, 'unassigned');
+});
 
 test('더보기 냉장고 삭제는 재료 일괄 삭제를 고지하고 확인한 경우에만 홈으로 돌아간다', async t => {
   const previous = { ...repository };
@@ -1648,7 +1762,8 @@ test('하단 메뉴는 공통 디자인의 탭 3개로 연결하고 패널 입�
       t.after(() => root.unmount());
       const stackRoutes = children(root.tree);
       assert.deepEqual(stackRoutes.map(route => route.props.name),
-        ['MainTabs', 'RefrigeratorRegistration', 'IngredientForm', 'IngredientRestore', 'ShoppingIngredientRegistration', 'ShoppingForm']);
+        ['MainTabs', 'RefrigeratorRegistration', 'IngredientForm', 'IngredientSearch', 'IngredientRestore',
+          'IngredientAssign', 'ShoppingIngredientRegistration', 'ShoppingForm']);
       assert.strictEqual(stackRoutes[0].props.children({}).type, MainTabNavigator);
       const formRoute = stackRoutes[2].props.children({});
       assert.strictEqual(formRoute.type, IngredientFormScreen);
@@ -1657,6 +1772,11 @@ test('하단 메뉴는 공통 디자인의 탭 3개로 연결하고 패널 입�
       formRoute.props.onResultChange(result);
       assert.strictEqual(tabsProps.takeIngredientFormResult(), result);
       assert.equal(tabsProps.takeIngredientFormResult(), null);
+      const searchRoute = stackRoutes[3].props.children({});
+      assert.strictEqual(searchRoute.type, searchScreenModule.IngredientSearchScreen);
+      searchRoute.props.onSelectIngredient('eggs');
+      assert.equal(tabsProps.takeIngredientSearchResult(), 'eggs');
+      assert.equal(tabsProps.takeIngredientSearchResult(), null);
       assert.strictEqual(stackRoutes[1].props.component, RefrigeratorRegistrationScreen);
       assert.equal(stackRoutes[1].props.options.gestureEnabled, false);
       const moreStack = mount(MoreStackNavigator, {});
@@ -1908,7 +2028,8 @@ test('일본어 도면·하위 설정·범례·이동 대기 목록은 위치와
   const list = find(queue.tree, node => node.type === 'SectionList');
   const section = list.props.sections[0];
   assert.equal(section.title, '1段目 → 庫内 → 1番目の区画');
-  const sectionHeader = list.props.renderSectionHeader({ section });
+  const breadcrumb = list.props.renderSectionHeader({ section });
+  const sectionHeader = breadcrumb.type(breadcrumb.props);
   assert.equal(sectionHeader.props.accessibilityLabel, '1段目, 庫内, 1番目の区画');
   assert.equal(findAll(sectionHeader, node => node.props.name === 'menu-right').length, 2);
   const row = list.props.renderItem({ item: ingredient, section });

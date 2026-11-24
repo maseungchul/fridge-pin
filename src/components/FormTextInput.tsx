@@ -44,6 +44,7 @@ export const FormTextInput = forwardRef<ComponentRef<typeof TextInput>, FormText
     const { mode, colors } = useAppTheme();
     const styles = getStyles(mode);
     const { t } = useTranslation();
+    const resolvedKeyboardAppearance = keyboardAppearance ?? mode;
     const accessibilityLabel = required
       ? `${inputProps.accessibilityLabel ?? label}, ${t('common.required')}`
       : inputProps.accessibilityLabel;
@@ -59,7 +60,7 @@ export const FormTextInput = forwardRef<ComponentRef<typeof TextInput>, FormText
               {...inputProps}
               accessibilityLabel={accessibilityLabel}
               placeholderTextColor={placeholderTextColor ?? colors.textMuted}
-              keyboardAppearance={keyboardAppearance ?? (mode === 'dark' ? 'dark' : 'default')}
+              keyboardAppearance={resolvedKeyboardAppearance}
               ref={ref}
               style={styles.inputWithTrailingElement}
             />
@@ -70,7 +71,7 @@ export const FormTextInput = forwardRef<ComponentRef<typeof TextInput>, FormText
             {...inputProps}
             accessibilityLabel={accessibilityLabel}
             placeholderTextColor={placeholderTextColor ?? colors.textMuted}
-            keyboardAppearance={keyboardAppearance ?? (mode === 'dark' ? 'dark' : 'default')}
+            keyboardAppearance={resolvedKeyboardAppearance}
             ref={ref}
             style={[styles.input, inputProps.multiline && styles.multilineInput, errorMessage ? styles.inputError : undefined]}
           />

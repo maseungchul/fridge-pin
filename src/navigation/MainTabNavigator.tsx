@@ -27,8 +27,9 @@ export type MainTabParamList = {
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-export function MainTabNavigator({ takeIngredientFormResult }: {
+export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearchResult }: {
   takeIngredientFormResult: () => IngredientFormResult | null;
+  takeIngredientSearchResult: () => string | null;
 }) {
   const { mode, colors } = useAppTheme();
   const styles = getStyles(mode);
@@ -124,7 +125,7 @@ export function MainTabNavigator({ takeIngredientFormResult }: {
       }}>
         {props => <HomeScreen {...props} onTabInteractionBlockedChange={setIsTabInteractionBlocked}
           clearDeletedRefrigeratorRef={clearDeletedRefrigerator}
-          takeIngredientFormResult={takeIngredientFormResult} />}
+          takeIngredientFormResult={takeIngredientFormResult} takeIngredientSearchResult={takeIngredientSearchResult} />}
       </Tab.Screen>
       <Tab.Screen name="Shopping" options={{
         title: t('tabs.shopping'),

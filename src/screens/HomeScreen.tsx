@@ -7,7 +7,7 @@ import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 import { MaskedView } from '@expo/ui/community/masked-view';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
@@ -49,6 +49,7 @@ type HomeScreenProps = CompositeScreenProps<
   onTabInteractionBlockedChange?: (blocked: boolean) => void;
   clearDeletedRefrigeratorRef?: RefObject<(() => void) | null>;
   takeIngredientFormResult: () => IngredientFormResult | null;
+  takeIngredientSearchResult?: () => string | null;
 };
 
 const EMPTY_PREVIEW_ROWS = [{ id: 'top', doorCount: 1 }, { id: 'bottom', doorCount: 1 }];
@@ -60,7 +61,8 @@ const HOME_TOOLBAR_TOGGLE_OVERLAP = HOME_MENU_SIZE / 2 + spacing.xs;
 const UNSEEN_CONSUMED_STORAGE_KEY = 'ingredients.hasUnseenConsumed';
 const EMPTY_INGREDIENT_DRAFT: IngredientDraft = { name: '', quantity: '', memo: '', expirationDate: null };
 
-export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngredientFormResult, clearDeletedRefrigeratorRef }: HomeScreenProps) {
+export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngredientFormResult, takeIngredientSearchResult,
+  clearDeletedRefrigeratorRef }: HomeScreenProps) {
   const { mode, colors } = useAppTheme();
   const styles = getStyles(mode);
   const { t } = useTranslation();
@@ -89,6 +91,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
   const [ingredientFormResultVersion, setIngredientFormResultVersion] = useState(0);
   const [ingredientListIndex, setIngredientListIndex] = useState(0);
   const [isLegendOpen, setIsLegendOpen] = useState(false);
+  const [searchPosition, setSearchPosition] = useState<Pick<Ingredient, 'slotId' | 'drawerNumber'> | null>(null);
   const [isConsumedOpen, setIsConsumedOpen] = useState(false);
   const [hasUnseenConsumed, setHasUnseenConsumed] = useState<boolean | null>(null);
   const consumedBadgeWrite = useRef(Promise.resolve());
@@ -137,6 +140,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
   } = useFridgeFocus(0, isFocusBlocked);
   const finishHomeFocus = useCallback((phase: FridgeFocusPhase) => {
     finishFocusTransition(phase);
+    if (phase === 'open') setSearchPosition(null);
     if (phase === 'closed') { setSelectedSlot(null); setIsIngredientListOpen(false); }
   }, [finishFocusTransition]);
   // 시트 종료 후 패널과 선택 상태를 함께 비운다.
@@ -167,12 +171,22 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
           returnToUnassignedList.current = false;
           if (unassigned.length) setOpenLocationList('unassigned');
         }
+        // 검색 화면에서 돌아오면 새로 조회한 재료의 현재 위치를 사용한다.
+        const searchedId = takeIngredientSearchResult?.();
+        if (searchedId && result) {
+          const ingredient = storedIngredients.find(item => item.id === searchedId);
+          if (ingredient) {
+            setSearchPosition({ slotId: ingredient.slotId, drawerNumber: ingredient.drawerNumber });
+          } else if (unassigned.some(item => item.id === searchedId)) {
+            setOpenLocationList('unassigned');
+          }
+        }
         retainMoveQueue(storedIngredients.map(ingredient => ingredient.id));
       }
     } catch {
       if (isCurrent()) setError('home.loadError');
     }
-  }), [db, resetFocus, retainMoveQueue, runLoad]);
+  }), [db, resetFocus, retainMoveQueue, runLoad, takeIngredientSearchResult]);
 
   useFocusEffect(useCallback(() => {
     if (ingredientFormPending.current) {
@@ -195,6 +209,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
       setIngredientListIndex(0);
       resetFocus();
       setSelectedSlot(null); setIsIngredientListOpen(false); setIsLegendOpen(false);
+      setSearchPosition(null);
       setOpenLocationList(null);
     };
   }, [cancelLoad, loadRefrigerator, resetFocus, takeIngredientFormResult]));
@@ -250,7 +265,14 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
     return () => subscription.remove();
   }, [activeFocus, closeFocusedArea, closeIngredientList, isIngredientListOpen, isLegendOpen, openLocationList]);
 
-  const layout = refrigerator ? getDraftLayout(refrigerator, [], t) : null;
+  const layout = useMemo(() => refrigerator ? getDraftLayout(refrigerator, [], t) : null, [refrigerator, t]);
+  const requestedPosition = !isLoading && searchPosition ? layout?.positions.find(position =>
+    position.slotId === searchPosition.slotId && (position.drawerNumber ?? 0) === searchPosition.drawerNumber) : undefined;
+  // 검색으로 문을 열었을 때는 사용자가 다른 칸을 누르기 전까지 결과의 칸을 강조한다.
+  const focusedPosition = activeFocus?.position;
+  const focusedSlotIndex = focusedPosition && layout ? layout.positions
+    .filter(position => position.areaId === focusedPosition.areaId && position.drawerNumber !== 2)
+    .findIndex(position => position.slotId === focusedPosition.slotId) : undefined;
   const selectedPosition = layout?.positions.find(position => position.id === selectedSlot?.positionId
     && position.areaId === selectedAreaId);
   const isToolbarAvailable = !!refrigerator && (!isLoading || (hasLoaded && !showLoading)) && !error;
@@ -292,16 +314,22 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                     <Text accessibilityRole="header" numberOfLines={1} style={styles.title}>{t('tabs.fridge')}</Text>
                     {refrigerator && <Text numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={refrigerator.name} style={styles.refrigeratorName}>{refrigerator.name}</Text>}
                   </View>
-                  {refrigerator && <FeedbackPressable iconFeedback accessibilityRole="button" accessibilityLabel={t('fridge.edit')} style={styles.headerIconButton}
-                    onPress={() => navigation.navigate('RefrigeratorRegistration', { refrigeratorId: refrigerator.id })}>
-                    <MaterialDesignIcons name="pencil" size={24} color={colors.text} accessible={false} />
-                  </FeedbackPressable>}
+                  {refrigerator ? <View style={styles.headerActions}>
+                    <FeedbackPressable iconFeedback accessibilityRole="button" accessibilityLabel={t('fridge.edit')} style={styles.headerIconButton}
+                      onPress={() => navigation.navigate('RefrigeratorRegistration', { refrigeratorId: refrigerator.id })}>
+                      <MaterialDesignIcons name="pencil" size={24} color={colors.text} accessible={false} />
+                    </FeedbackPressable>
+                    <FeedbackPressable iconFeedback accessibilityRole="button" accessibilityLabel={t('search.open')} style={styles.headerIconButton}
+                      onPress={() => navigation.navigate('IngredientSearch')}>
+                      <MaterialDesignIcons name="magnify" size={24} color={colors.text} accessible={false} />
+                    </FeedbackPressable>
+                  </View> : null}
                 </View>
                 {refrigerator ? <View style={styles.diagram}>
                   <View style={StyleSheet.absoluteFill}>
                     <FridgeInteriorMap draft={refrigerator} ingredients={ingredients} now={badgeDate} selectedAreaId={selectedAreaId ?? undefined}
                       onSelectArea={setSelectedAreaId} focus={activeFocus} onFocus={openFocusedArea} fitHeight layoutSize={diagramSizes.closed}
-                      scrollVertically onCanvasOffsetChange={updateClosedScroll} />
+                      scrollVertically onCanvasOffsetChange={updateClosedScroll} requestedPosition={requestedPosition} />
                   </View>
                 </View> : (
                   <ScrollView style={styles.emptyScroll} contentContainerStyle={styles.emptyContent}
@@ -328,8 +356,8 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
               <FridgeFocusView draft={refrigerator} ingredients={ingredients} now={badgeDate} target={activeFocus} viewport={focusBounds} phase={focusPhase}
                 sizeViewport={diagramSizes.opened} flushVerticalEdges
                 selectedAreaId={selectedAreaId ?? undefined} scrollHintEnabled={!hasSeenScrollHint}
-                selectedSlotIndex={selectedSlot?.index}
-                selectedPositionId={selectedSlot?.positionId}
+                selectedSlotIndex={selectedSlot?.index ?? focusedSlotIndex}
+                selectedPositionId={selectedSlot ? selectedSlot.positionId : focusedPosition?.id}
                 scrollHintBlocked={isOverlayOpen || isToolbarChanging}
                 onSelectSlot={(areaId, index, positionId) => {
                   if (focusPhase !== 'open' || isOverlayOpen || toolbarChanging.current) return;
@@ -534,10 +562,10 @@ const getStyles = createThemedStyles(({ colors, fridgeDoorColors }, mode) => Sty
   headerText: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm },
   title: { ...getHeaderStyles(mode).title },
   refrigeratorName: { flex: 1, color: colors.textMuted, fontSize: 14, lineHeight: 20, includeFontPadding: false },
+  headerActions: { flexDirection: 'row', marginRight: -(FRIDGE_HEADER_BUTTON_SIZE - 24) / 2 },
   headerIconButton: {
     width: FRIDGE_HEADER_BUTTON_SIZE,
     height: FRIDGE_HEADER_BUTTON_SIZE,
-    marginRight: -(FRIDGE_HEADER_BUTTON_SIZE - 24) / 2,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 24,

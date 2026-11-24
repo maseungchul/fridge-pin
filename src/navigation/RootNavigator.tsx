@@ -1,7 +1,7 @@
 /**
  * @file
  * RootNavigator는 앱에서 사용할 화면과 화면 전환 방식을 구성한다.
- * 기본 하단 탭을 시작 화면으로 표시하고 입력과 등록·복구 위치 선택을 별도 화면으로 연다.
+ * 기본 하단 탭을 시작 화면으로 표시하고 검색·입력·위치 선택을 별도 화면으로 연다.
  */
 import { useCallback, useRef } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,6 +9,7 @@ import { MainTabNavigator } from '@/navigation/MainTabNavigator';
 import { RefrigeratorRegistrationScreen } from '@/screens/RefrigeratorRegistrationScreen';
 import { IngredientFormScreen, type IngredientFormResult } from '@/screens/IngredientFormScreen';
 import { IngredientPositionScreen } from '@/screens/IngredientPositionScreen';
+import { IngredientSearchScreen } from '@/screens/IngredientSearchScreen';
 import { ShoppingFormScreen } from '@/screens/ShoppingFormScreen';
 import type { PurchasedShoppingItem, ShoppingItem } from '@/db/shoppingRepository';
 import type { Ingredient, IngredientDraft } from '@/features/ingredient/model/ingredient';
@@ -24,6 +25,7 @@ export type RootStackParamList = {
     draft: IngredientDraft;
   };
   IngredientRestore: { id: string; consumedAt: string };
+  IngredientSearch: undefined;
   IngredientAssign: { ids: string[] };
   ShoppingIngredientRegistration: { items: PurchasedShoppingItem[] };
   ShoppingForm: { item: ShoppingItem } | undefined;
@@ -44,6 +46,12 @@ export function RootNavigator() {
     ingredientFormResult.current = null;
     return result;
   }, []);
+  const ingredientSearchResult = useRef<string | null>(null);
+  const takeIngredientSearchResult = useCallback(() => {
+    const id = ingredientSearchResult.current;
+    ingredientSearchResult.current = null;
+    return id;
+  }, []);
 
   return (
     <Stack.Navigator
@@ -54,7 +62,8 @@ export function RootNavigator() {
       }}
     >
       <Stack.Screen name="MainTabs">
-        {props => <MainTabNavigator {...props} takeIngredientFormResult={takeIngredientFormResult} />}
+        {props => <MainTabNavigator {...props} takeIngredientFormResult={takeIngredientFormResult}
+          takeIngredientSearchResult={takeIngredientSearchResult} />}
       </Stack.Screen>
       <Stack.Screen
         component={RefrigeratorRegistrationScreen}
@@ -66,6 +75,9 @@ export function RootNavigator() {
         contentStyle: { backgroundColor: 'transparent' },
       }}>
         {props => <IngredientFormScreen {...props} onResultChange={updateIngredientFormResult} />}
+      </Stack.Screen>
+      <Stack.Screen name="IngredientSearch">
+        {props => <IngredientSearchScreen {...props} onSelectIngredient={id => { ingredientSearchResult.current = id; }} />}
       </Stack.Screen>
       <Stack.Screen name="IngredientRestore" component={IngredientPositionScreen} />
       <Stack.Screen name="IngredientAssign" component={IngredientPositionScreen} />

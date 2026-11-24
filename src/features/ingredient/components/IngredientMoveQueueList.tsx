@@ -10,8 +10,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { FeedbackPressable } from '@/components/FeedbackPressable';
 import { EmptyListState } from '@/components/EmptyListState';
-import { getPositionName } from '@/features/fridge/model/fridgeLayout';
+import { getIngredientLocationPath } from '@/features/fridge/model/fridgeLayout';
 import type { FridgeLayout } from '@/features/fridge/model/fridgeLayout';
+import { IngredientLocationBreadcrumb } from '@/features/ingredient/components/IngredientLocationBreadcrumb';
 import type { Ingredient } from '@/features/ingredient/model/ingredient';
 import { getIngredientExpirationStatus } from '@/features/ingredient/model/ingredient';
 import { spacing, createThemedStyles } from '@/theme/tokens';
@@ -112,20 +113,11 @@ export function IngredientMoveQueueList({ ingredients, layout, disabled, selecti
   }
   const sections: { key: string; title: string; path: string[]; data: Ingredient[] }[] = [];
   for (const ingredient of ingredients) {
-    const position = layout?.positions.find(candidate => candidate.slotId === ingredient.slotId
-      && (candidate.drawerNumber ?? 0) === ingredient.drawerNumber);
-    const area = layout?.areas.find(candidate => candidate.id === position?.areaId);
     const sourcePath = getSourcePath?.(ingredient.id);
     const key = sourcePath?.join(' → ') ?? `${ingredient.slotId}:${ingredient.drawerNumber}`;
     let section = sections.find(candidate => candidate.key === key);
     if (!section) {
-      // 문의 이름은 여는 방향이므로 실제 출발 위치는 단·영역 순서로 구분한다.
-      const slotIndex = layout?.positions.filter(candidate => candidate.areaId === area?.id)
-        .filter((candidate, index, positions) => positions.findIndex(other => other.slotId === candidate.slotId) === index)
-        .findIndex(candidate => candidate.slotId === position?.slotId) ?? -1;
-      const path = sourcePath ?? (position && area
-        ? [area.compartment, area.isBody ? t('fridge.body') : t('fridge.doorPocket'), getPositionName({ ...position, name: t('fridge.shortSlotName', { index: slotIndex + 1 }) }, t)]
-        : [t('queue.locationMissing')]);
+      const path = sourcePath ?? (layout && getIngredientLocationPath(layout, ingredient, t)) ?? [t('queue.locationMissing')];
       section = { key, title: path.join(' → '), path, data: [] };
       sections.push(section);
     }
@@ -142,16 +134,7 @@ export function IngredientMoveQueueList({ ingredients, layout, disabled, selecti
           ? <Text style={styles.guide}>{t('unassigned.guide')}</Text> : undefined}
         ListEmptyComponent={<EmptyListState message={t(onAssign ? 'unassigned.emptyTitle' : 'queue.emptyTitle')}
           description={t(onAssign ? 'unassigned.emptyGuide' : 'queue.emptyGuide')} />}
-        renderSectionHeader={({ section }) => (
-          <View accessible accessibilityRole="header" accessibilityLabel={section.path.join(', ')} style={styles.location}>
-            {section.path.map((part, index) => (
-              <View key={index} style={styles.locationPart}>
-                {index > 0 ? <MaterialDesignIcons name="menu-right" size={16} color={colors.chilled} accessible={false} /> : null}
-                <Text style={styles.locationText}>{part}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        renderSectionHeader={({ section }) => <IngredientLocationBreadcrumb path={section.path} sectionHeader />}
         renderItem={({ item, section }) => {
           const expiration = getIngredientExpirationStatus(item.expirationDate, undefined, t);
           const checked = selectedIds?.includes(item.id) ?? false;
@@ -214,10 +197,6 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   headerButton: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   list: { flex: 1 },
   guide: { padding: spacing.md, color: colors.textMuted, fontSize: 14, lineHeight: 21 },
-  location: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center',
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, backgroundColor: colors.chilledBackground },
-  locationPart: { flexDirection: 'row', alignItems: 'center', flexShrink: 1 },
-  locationText: { color: colors.chilled, fontSize: 14, lineHeight: 21, fontWeight: '600', flexShrink: 1 },
   item: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md,
     paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   labels: { flex: 1, gap: spacing.xs },

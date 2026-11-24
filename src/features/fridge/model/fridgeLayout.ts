@@ -300,6 +300,18 @@ export function getPositionPath(area: StorageArea, position: SlotPosition, t: Tr
   return `${area.compartment} → ${area.name}${area.isBody ? '' : ` ${t('fridge.doorPocket')}`} → ${getPositionName(position, t)}`;
 }
 
+/** 재료 목록의 위치 경로는 문이 열리는 방향 대신 단·수납 영역·칸 순서로 표시한다. */
+export function getIngredientLocationPath(layout: FridgeLayout, ingredient: Pick<Ingredient, 'slotId' | 'drawerNumber'>,
+  t: Translator = defaultTranslate) {
+  const position = layout.positions.find(candidate => candidate.slotId === ingredient.slotId
+    && (candidate.drawerNumber ?? 0) === ingredient.drawerNumber);
+  const area = position && layout.areas.find(candidate => candidate.id === position.areaId);
+  if (!position || !area) return null;
+  const slotIds = [...new Set(layout.positions.filter(candidate => candidate.areaId === area.id).map(candidate => candidate.slotId))];
+  const name = t('fridge.shortSlotName', { index: slotIds.indexOf(position.slotId) + 1 });
+  return [area.compartment, t(area.isBody ? 'fridge.body' : 'fridge.doorPocket'), getPositionName({ ...position, name }, t)];
+}
+
 /** 자동 위치명에 좌우 분할 방향을 붙여 같은 칸의 선택 위치를 구분한다. */
 export function getPositionName(position: SlotPosition, t: Translator = defaultTranslate) {
   return position.drawerNumber ? `${position.name} · ${t(position.drawerNumber === 1 ? 'fridge.left' : 'fridge.right')}` : position.name;

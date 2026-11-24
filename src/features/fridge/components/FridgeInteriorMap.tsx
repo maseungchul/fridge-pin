@@ -11,7 +11,7 @@ import type { LayoutChangeEvent, LayoutRectangle, StyleProp, ViewStyle } from 'r
 import { Toast } from '@/components/Toast';
 import { DOOR_MODE_ART_INSET, DoorHandle, DoorModeArt, FridgeMap, getFridgeAreaEditSize } from '@/features/fridge/components/FridgeMap';
 import { areaNames, FRIDGE_ASPECT_RATIO, getDraftAreaLocation, getDraftLayout, getDraftRowGeometry, getStorageModeName } from '@/features/fridge/model/fridgeLayout';
-import type { DraftDoor, FridgeLayout, RefrigeratorDraft, StorageArea, StorageMode } from '@/features/fridge/model/fridgeLayout';
+import type { DraftDoor, FridgeLayout, RefrigeratorDraft, SlotPosition, StorageArea, StorageMode } from '@/features/fridge/model/fridgeLayout';
 import { IngredientCountBadges, getIngredientCountLabel } from '@/features/ingredient/components/IngredientCountBadges';
 import { getIngredientCounts } from '@/features/ingredient/model/ingredient';
 import type { Ingredient, IngredientCounts } from '@/features/ingredient/model/ingredient';
@@ -24,6 +24,7 @@ import { useTranslation } from '@/i18n/LanguageProvider';
 interface FridgeInteriorMapProps {
   draft: Pick<RefrigeratorDraft, 'rows'>;
   selectedAreaId?: string;
+  requestedPosition?: SlotPosition;
   onSelectArea: (id: string) => void;
   focus?: FridgeFocusTarget | null;
   onFocus: (target: FridgeFocusTarget) => void;
@@ -41,6 +42,7 @@ export interface FridgeFocusTarget {
   areaId: string;
   returnAreaId: string;
   canvas: LayoutRectangle;
+  position?: SlotPosition;
 }
 
 type BodyGeometry = ReturnType<typeof getDraftRowGeometry>['groups'][number];
@@ -84,7 +86,7 @@ export function useFridgeFocus(reservedBottom = 0, isBlocked?: () => boolean) {
       ? current : { ...current, ...size });
   }
 
-  function openFocusedArea(target: FridgeFocusTarget) {
+  const openFocusedArea = useCallback((target: FridgeFocusTarget) => {
     if (isBlocked?.() || activeFocus) return;
     Keyboard.dismiss();
     const request = ++openRequest.current;
@@ -92,10 +94,10 @@ export function useFridgeFocus(reservedBottom = 0, isBlocked?: () => boolean) {
       if (width <= 0 || height <= 0 || isBlocked?.() || request !== openRequest.current) return;
       setFocusBounds({ x, y, ...(viewportSize.current ?? { width, height: Math.max(1, height - reservedBottom) }) });
       setFocusTarget(target);
-      setSelectedAreaId(target.areaId);
+      setSelectedAreaId(target.position?.areaId ?? target.areaId);
       setFocusPhase('opening');
     });
-  }
+  }, [activeFocus, isBlocked, reservedBottom]);
 
   const closeFocusedArea = useCallback(() => {
     if (isBlocked?.() || !activeFocus || focusPhase !== 'open') return;
@@ -623,6 +625,32 @@ export function FridgeFocusView({ draft, target, viewport, overlayHeight, phase,
     return () => animation.stop();
   }, [phase, progress, onPhaseChange]);
 
+  let requestedScrollX: number | undefined;
+  let requestedScrollY: number | undefined;
+  const position = target.position;
+  // 도어 포켓이나 아래쪽 칸이 화면 밖에 있으면 열림이 끝난 뒤 선택 위치를 표시 범위로 가져온다.
+  if (geometry && position) {
+    const pocket = geometry.pockets.find(({ door }) => door.id === position.areaId);
+    const frame = pocket?.frame ?? geometry.body;
+    if (geometry.scrollable) {
+      const center = frame.left + frame.width * (position.drawerNumber === 1 ? 0.25 : position.drawerNumber === 2 ? 0.75 : 0.5);
+      requestedScrollX = Math.max(0, Math.min(maxScrollX, geometry.scrollPaddingLeft + center - viewport.width / 2));
+    }
+    if (geometry.verticalScrollable) {
+      const slots = pocket?.door.slots ?? geometry.group.body.slots;
+      const index = slots.findIndex(slot => slot.id === position.slotId);
+      if (index >= 0) {
+        const center = frame.top + frame.height * (index + 0.5) / slots.length;
+        requestedScrollY = Math.max(0, Math.min(maxScrollY, center - geometry.scrollViewportHeight / 2));
+      }
+    }
+  }
+  useEffect(() => {
+    if (!open) return;
+    if (requestedScrollX !== undefined) scrollRef.current?.scrollTo({ x: requestedScrollX, animated: true });
+    if (requestedScrollY !== undefined) verticalScrollRef.current?.scrollTo({ y: requestedScrollY, animated: true });
+  }, [open, requestedScrollX, requestedScrollY]);
+
   if (!geometry) return null;
   const { row, rowIndex, group, body, pockets, doors } = geometry;
   const bodyCorners = doorGaps ? HOME_DOOR_CORNERS : getGridCorners(getGridEdges(row, rowIndex, draft.rows.length, group.body.doorIds));
@@ -780,10 +808,11 @@ export function FridgeFocusView({ draft, target, viewport, overlayHeight, phase,
 
 /** 닫힌 도면은 공통 크기 기준으로 배치하고, 중앙 보기로 이동한 영역은 원래 자리에서 숨긴다. */
 export function FridgeInteriorMap({ draft, ingredients, now, selectedAreaId, onSelectArea, focus, onFocus, fitHeight = false, layoutSize,
-  scrollVertically = false, onCanvasOffsetChange, doorGaps = true }: FridgeInteriorMapProps) {
+  scrollVertically = false, onCanvasOffsetChange, doorGaps = true, requestedPosition }: FridgeInteriorMapProps) {
   const { mode } = useAppTheme();
   const styles = getStyles(mode);
   const { t } = useTranslation();
+  const canvasRef = useRef<ComponentRef<typeof View>>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
   const size = layoutSize ?? viewportSize;
   const { width: viewportWidth } = size;
@@ -792,8 +821,21 @@ export function FridgeInteriorMap({ draft, ingredients, now, selectedAreaId, onS
   const mapHeight = mapWidth / FRIDGE_ASPECT_RATIO;
   const rowGeometries = draft.rows.map(getDraftRowGeometry);
   const layout = ingredients ? getDraftLayout(draft, ingredients, t) : undefined;
+  useEffect(() => {
+    if (!requestedPosition || focus || viewportSize.width <= 0 || viewportSize.height <= 0) return;
+    const { areaId } = requestedPosition;
+    const body = draft.rows.flatMap(row => row.compartments).find(item => item.id === areaId || item.doorIds.includes(areaId));
+    if (!body) return;
+    let active = true;
+    canvasRef.current?.measureInWindow((x, y, width, height) => {
+      if (!active || width <= 0 || height <= 0) return;
+      onFocus({ areaId: body.id, returnAreaId: areaId, canvas: { x, y, width, height }, position: requestedPosition });
+    });
+    return () => { active = false; };
+  }, [draft, focus, onFocus, requestedPosition, viewportSize]);
+
   const canvas = (
-    <View style={[styles.canvas, { width: mapWidth, height: mapHeight }]}>
+    <View ref={canvasRef} collapsable={false} style={[styles.canvas, { width: mapWidth, height: mapHeight }]}>
       {viewportWidth > 0 ? rowGeometries.flatMap((rowGeometry, rowIndex) => {
         const bounds = getRowBounds(mapHeight, draft.rows.length, rowIndex);
         return rowGeometry.groups.map(group => (
