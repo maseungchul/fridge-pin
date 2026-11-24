@@ -2,7 +2,6 @@
  * @file
  * 빈 목록 안내 문구와 냉장고 캐릭터를 표시한다.
  */
-import { useState } from 'react';
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 import { spacing, createThemedStyles } from '@/theme/tokens';
@@ -18,13 +17,11 @@ interface EmptyListStateProps {
 export function EmptyListState({ message, description, storageMode }: EmptyListStateProps) {
   const { mode, colors, fridgeDoorColors } = useAppTheme();
   const styles = getStyles(mode);
-  const [randomMode] = useState<StorageMode>(() => Math.random() < 0.5 ? 'CHILLED' : 'FROZEN');
-  const imageMode = storageMode ?? randomMode;
   return (
     <View style={styles.container}>
       <View style={styles.conceptContainer}>
-        <Image source={imageMode === 'FROZEN' ? require('../../assets/fridge-frozen-concept.svg') : require('../../assets/fridge-chilled-concept.svg')}
-          style={styles.conceptImage} contentFit="contain" svgVariables={{ '--line': imageMode === 'FROZEN' ? colors.frozen : colors.chilled, '--fill': fridgeDoorColors[imageMode].background }}
+        <Image source={storageMode === 'FROZEN' ? require('../../assets/fridge-frozen-concept.svg') : storageMode === 'CHILLED' ? require('../../assets/fridge-chilled-concept.svg') : require('../../assets/fridge-normal-concept.svg')}
+          style={styles.conceptImage} contentFit="contain" svgVariables={storageMode ? { '--line': storageMode === 'FROZEN' ? colors.frozen : colors.chilled, '--fill': fridgeDoorColors[storageMode].background } : { '--line': '#706B65', '--fill': '#EEEAE5' }}
           accessible={false} pointerEvents="none" />
       </View>
       <View style={styles.messageContainer}>
