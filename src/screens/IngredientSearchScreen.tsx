@@ -25,7 +25,7 @@ import { useDelayedLoading } from '@/hooks/useDelayedLoading';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 import { COMPACT_HEADER_ICON_SIZE, HEADER_CONTENT_HEIGHT, getCompactHeaderStyles } from '@/theme/headerStyles';
 import { useAppTheme } from '@/theme/ThemeProvider';
-import { createThemedStyles, spacing } from '@/theme/tokens';
+import { TAG_ICON_GAP, createThemedStyles, spacing } from '@/theme/tokens';
 
 const SEARCH_DELAY_MS = 250;
 const TAG_SEARCH_PREFIX = '# ';
@@ -265,7 +265,7 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
                         </View>
                         {tags.length > 0 ? <View style={styles.matchTags}>
                           {tags.map(tag => <View key={tag.id} style={styles.matchTag}>
-                            <MaterialDesignIcons name="pound" size={14} color={colors.textMuted} accessible={false} />
+                            <MaterialDesignIcons name="pound" style={styles.resultTagIcon} size={14} color={colors.textMuted} accessible={false} />
                             {highlightName(tag.name, searchTerms, styles, true)}
                           </View>)}
                         </View> : null}
@@ -304,6 +304,7 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   matchTags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
   matchTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
     borderRadius: 12, paddingHorizontal: spacing.xs, paddingVertical: 3 },
+  resultTagIcon: { marginRight: TAG_ICON_GAP },
   matchTagText: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
   name: { color: colors.text, fontSize: 16 },
   quantity: { color: colors.text, fontSize: 14, marginLeft: spacing.sm },
@@ -314,12 +315,12 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   searchBar: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingLeft: spacing.sm,
     backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
   searchFields: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm },
-  searchTag: { flexDirection: 'row', alignItems: 'center', gap: 2, maxWidth: '100%', paddingVertical: spacing.xs },
+  searchTag: { flexDirection: 'row', alignItems: 'center', gap: TAG_ICON_GAP, maxWidth: '100%', paddingVertical: spacing.xs },
   searchTagText: { flexShrink: 1, fontSize: 16, color: colors.chilled },
   activeSearchField: { flexGrow: 1, flexBasis: 100, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   inputContainer: { flex: 1, minWidth: 0, justifyContent: 'center' },
   input: { minHeight: 46, color: colors.text, fontSize: 16, paddingRight: spacing.sm, paddingVertical: spacing.xs },
-  tagInput: { marginLeft: -spacing.sm + 2 },
+  tagInput: { marginLeft: TAG_ICON_GAP - spacing.sm },
   tagInputText: { color: colors.chilled },
   tagPlaceholder: { position: 'absolute', left: 0, color: mode === 'dark' ? '#83A590' : colors.chilledPressed, fontSize: 16 },
   clearButton: { width: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' },

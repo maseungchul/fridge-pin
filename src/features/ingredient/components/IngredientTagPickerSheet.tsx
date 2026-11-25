@@ -20,7 +20,7 @@ import { INGREDIENT_TAG_NAME_MAX_LENGTH, normalizeIngredientSearchText } from '@
 import { getErrorMessage } from '@/i18n/errors';
 import { useTranslation } from '@/i18n/LanguageProvider';
 import { useAppTheme } from '@/theme/ThemeProvider';
-import { createThemedStyles, spacing } from '@/theme/tokens';
+import { TAG_ICON_GAP, createThemedStyles, spacing } from '@/theme/tokens';
 
 interface IngredientTagPickerSheetProps {
   sheetRef: RefObject<BottomSheetRef | null>;
@@ -176,7 +176,7 @@ const getStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   input: { flex: 1, minHeight: 46, paddingVertical: spacing.xs, color: colors.text, fontSize: 16 },
   list: { flex: 1, paddingHorizontal: spacing.md },
   sectionTitle: { color: colors.textMuted, fontSize: 13, fontWeight: '600', paddingTop: spacing.md, paddingBottom: spacing.xs },
-  row: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: 10 },
+  row: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: TAG_ICON_GAP, paddingHorizontal: spacing.sm, borderRadius: 10 },
   tagRow: { marginVertical: 2 },
   selected: { backgroundColor: colors.sageLight },
   name: { flex: 1, color: colors.text, fontSize: 16 },

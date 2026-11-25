@@ -28,7 +28,7 @@ import { getErrorMessage } from '@/i18n/errors';
 import { formatDate } from '@/i18n/translations';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 import { HEADER_CONTENT_HEIGHT, COMPACT_HEADER_ICON_INSET, COMPACT_HEADER_ICON_SIZE, getCompactHeaderStyles } from '@/theme/headerStyles';
-import { spacing, createThemedStyles } from '@/theme/tokens';
+import { TAG_ICON_GAP, spacing, createThemedStyles } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 export interface IngredientFormResult {
@@ -313,11 +313,11 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   clearDateButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22 },
   tagSection: { marginTop: spacing.lg },
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  tagChip: { minHeight: 44, maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: spacing.xs, alignSelf: 'flex-start',
+  tagChip: { minHeight: 44, maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: TAG_ICON_GAP, alignSelf: 'flex-start',
     paddingHorizontal: spacing.sm, borderRadius: 22, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
   tagAddButton: { height: 44, justifyContent: 'center' },
   tagText: { flexShrink: 1, maxWidth: 180, color: colors.text, fontSize: 14 },
-  removeTagButton: { width: 44, height: 44, marginLeft: -spacing.sm, marginRight: -spacing.sm,
+  removeTagButton: { width: 44, height: 44, marginLeft: spacing.xs - TAG_ICON_GAP - spacing.sm, marginRight: -spacing.sm,
     alignItems: 'center', justifyContent: 'center', borderRadius: 22 },
   errorText: { flexShrink: 1, color: colors.error, fontSize: 14 },
   error: { color: colors.error, fontSize: 16, textAlign: 'center', marginTop: spacing.md },

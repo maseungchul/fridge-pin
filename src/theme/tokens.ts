@@ -165,6 +165,8 @@ export function getFridgeSurfaceStyle(storageMode: keyof typeof fridgeDoorColors
 
 // padding, margin, gap에 사용하는 공통 간격이다. xs부터 lg까지 크기가 커진다.
 // React Native 스타일의 숫자 값은 화면 밀도에 독립적인 논리 단위로 사용된다.
+export const TAG_ICON_GAP = 2;
+
 export const spacing = {
   xs: 6,
   sm: 10,

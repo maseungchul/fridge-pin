@@ -20,7 +20,7 @@ import { useTranslation } from '@/i18n/LanguageProvider';
 import type { MoreStackParamList } from '@/navigation/MoreStackNavigator';
 import { COMPACT_HEADER_ICON_SIZE, HEADER_CONTENT_HEIGHT, getCompactHeaderStyles } from '@/theme/headerStyles';
 import { useAppTheme } from '@/theme/ThemeProvider';
-import { createThemedStyles, spacing } from '@/theme/tokens';
+import { TAG_ICON_GAP, createThemedStyles, spacing } from '@/theme/tokens';
 
 export function IngredientTagManagementScreen({ navigation }: NativeStackScreenProps<MoreStackParamList, 'IngredientTags'>) {
   const { colors, mode } = useAppTheme();
@@ -135,7 +135,7 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   backButton: { width: HEADER_CONTENT_HEIGHT, height: HEADER_CONTENT_HEIGHT, marginLeft: -spacing.sm,
     alignItems: 'center', justifyContent: 'center', borderRadius: 24 },
   content: { flexGrow: 1, padding: spacing.md },
-  row: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+  row: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: TAG_ICON_GAP,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   name: { flex: 1, minHeight: 44, paddingVertical: 0, color: colors.text, fontSize: 16 },
   iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22 },
