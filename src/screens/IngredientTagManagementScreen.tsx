@@ -1,12 +1,13 @@
 /**
  * @file
  * 더보기에서 공용 재료 태그의 이름을 변경하거나 삭제한다.
+ * 불러온 태그에 이름 검색을 적용해 편집할 태그를 찾는다.
  * 태그를 삭제할 때는 연결된 재료에도 반영된다는 점을 먼저 안내한다.
  */
 import { useIsFocused, usePreventRemove } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -14,7 +15,7 @@ import { FeedbackPressable } from '@/components/FeedbackPressable';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { deleteIngredientTag, getIngredientTagOptions, saveIngredientTag } from '@/db/ingredientTagRepository';
 import type { IngredientTag } from '@/features/ingredient/model/ingredient';
-import { INGREDIENT_TAG_NAME_MAX_LENGTH } from '@/features/ingredient/model/ingredient';
+import { INGREDIENT_TAG_NAME_MAX_LENGTH, normalizeIngredientSearchText } from '@/features/ingredient/model/ingredient';
 import { getErrorMessage } from '@/i18n/errors';
 import { useTranslation } from '@/i18n/LanguageProvider';
 import type { MoreStackParamList } from '@/navigation/MoreStackNavigator';
@@ -29,12 +30,15 @@ export function IngredientTagManagementScreen({ navigation }: NativeStackScreenP
   const db = useSQLiteContext();
   const isFocused = useIsFocused();
   const [tags, setTags] = useState<IngredientTag[] | null>(null);
+  const [query, setQuery] = useState('');
   const [inputRevision, setInputRevision] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [error, setError] = useState<{ cause: unknown } | null>(null);
   const saving = useRef(false);
+  const queryKey = normalizeIngredientSearchText(query);
+  const visibleTags = queryKey ? tags?.filter(tag => normalizeIngredientSearchText(tag.name).includes(queryKey)) : tags;
 
   useEffect(() => {
     if (!isFocused) return;
@@ -99,8 +103,16 @@ export function IngredientTagManagementScreen({ navigation }: NativeStackScreenP
           </FeedbackPressable>
           <Text accessibilityRole="header" style={styles.title}>{t('tag.manageTitle')}</Text>
         </Pressable>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="never">
-          {loadError ? (
+        {tags?.length && !loadError ? (
+          <TextInput style={styles.search} value={query} onChangeText={setQuery}
+            accessibilityLabel={t('search.tagPlaceholder')} placeholder={t('search.tagPlaceholder')}
+            placeholderTextColor={colors.textMuted} keyboardAppearance={mode} autoCorrect={false} returnKeyType="search" />
+        ) : null}
+        {error ? <Text accessibilityRole="alert" style={[styles.error, styles.saveError]}>{getErrorMessage(error.cause, t, t('tag.saveError'))}</Text> : null}
+        <FlatList data={loadError ? [] : visibleTags ?? []} keyExtractor={tag => tag.id}
+          contentContainerStyle={styles.content} keyboardShouldPersistTaps="never"
+          ListEmptyComponent={
+          loadError ? (
             <>
               <Text accessibilityRole="alert" style={styles.error}>{t('tag.loadError')}</Text>
               <PrimaryButton label={t('common.retry')} onPress={() => {
@@ -108,8 +120,11 @@ export function IngredientTagManagementScreen({ navigation }: NativeStackScreenP
                 setLoadAttempt(current => current + 1);
               }} />
             </>
-          ) : !tags ? <ActivityIndicator color={colors.text} accessibilityLabel={t('common.loading')} /> : tags.length ? tags.map(tag => (
-            <View key={tag.id} style={styles.row}>
+          ) : !tags ? <ActivityIndicator color={colors.text} accessibilityLabel={t('common.loading')} />
+            : <Text style={styles.empty}>{t(tags.length ? 'tag.noResults' : 'tag.empty')}</Text>
+          }
+          renderItem={({ item: tag }) => (
+            <View style={styles.row}>
               <MaterialDesignIcons name="pound" size={18} color={colors.textMuted} accessible={false} />
               <TextInput key={inputRevision[tag.id] ?? 0} style={styles.name} defaultValue={tag.name}
                 accessibilityLabel={t('tag.rename', { name: tag.name })} maxLength={INGREDIENT_TAG_NAME_MAX_LENGTH}
@@ -120,9 +135,7 @@ export function IngredientTagManagementScreen({ navigation }: NativeStackScreenP
                 <MaterialDesignIcons name="trash-can-outline" size={20} color={colors.error} accessible={false} />
               </FeedbackPressable>
             </View>
-          )) : <Text style={styles.empty}>{t('tag.empty')}</Text>}
-          {error ? <Text accessibilityRole="alert" style={styles.error}>{getErrorMessage(error.cause, t, t('tag.saveError'))}</Text> : null}
-        </ScrollView>
+          )} />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -135,10 +148,13 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   backButton: { width: HEADER_CONTENT_HEIGHT, height: HEADER_CONTENT_HEIGHT, marginLeft: -spacing.sm,
     alignItems: 'center', justifyContent: 'center', borderRadius: 24 },
   content: { flexGrow: 1, padding: spacing.md },
+  search: { minHeight: 44, marginHorizontal: spacing.md, marginTop: spacing.md, paddingHorizontal: spacing.md,
+    borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, borderRadius: 12, color: colors.text, fontSize: 16 },
   row: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: TAG_ICON_GAP,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   name: { flex: 1, minHeight: 44, paddingVertical: 0, color: colors.text, fontSize: 16 },
   iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 22 },
   empty: { color: colors.textMuted, textAlign: 'center', padding: spacing.md },
   error: { color: colors.error, marginVertical: spacing.sm },
+  saveError: { marginHorizontal: spacing.md },
 }));

@@ -113,6 +113,7 @@ export const ko = {
   'tag.delete': '‘{name}’ 태그 삭제',
   'tag.deleteMessage': '이 태그가 연결된 모든 재료에서 제거됩니다. 재료는 그대로 남습니다.',
   'tag.empty': '등록된 태그가 없어요.',
+  'tag.noResults': '검색 결과가 없어요.',
   'tag.loadError': '태그를 불러오지 못했어요.',
   'tag.saveError': '태그 변경을 저장하지 못했어요.',
   'tag.invalidName': '태그 이름을 1~20자로 입력해 주세요.',

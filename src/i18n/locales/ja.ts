@@ -115,6 +115,7 @@ export const ja: Record<keyof typeof ko, string> = {
   'tag.delete': '「{name}」を削除',
   'tag.deleteMessage': '関連するすべての食材からこのタグが外れます。食材はそのまま残ります。',
   'tag.empty': '登録されたタグがありません。',
+  'tag.noResults': '該当するタグがありません。',
   'tag.loadError': 'タグを読み込めませんでした。',
   'tag.saveError': 'タグの変更を保存できませんでした。',
   'tag.invalidName': 'タグ名は1〜20文字で入力してください。',
