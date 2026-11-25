@@ -39,6 +39,25 @@ type IngredientSearchScreenProps = NativeStackScreenProps<RootStackParamList, 'I
   onSelectIngredient: (id: string) => void;
 };
 
+/** 넓은 조건이 먼저 태그를 골랐어도 다른 후보로 옮겨 각 조건에 별도 태그를 배정한다. */
+function matchesDistinctTags(terms: readonly string[], candidates: Map<string, string[]>) {
+  const assignedTerms = new Map<string, string>();
+
+  function assign(term: string, visited: Set<string>): boolean {
+    for (const id of candidates.get(term) ?? []) {
+      if (visited.has(id)) continue;
+      visited.add(id);
+      const previous = assignedTerms.get(id);
+      if (previous !== undefined && !assign(previous, visited)) continue;
+      assignedTerms.set(id, term);
+      return true;
+    }
+    return false;
+  }
+
+  return terms.every(term => assign(term, new Set<string>()));
+}
+
 /** 정규화로 문자 길이가 달라져도 화면에는 원래 재료명과 태그명을 유지한다. */
 function highlightName(name: string, queries: readonly string[], styles: ReturnType<typeof getStyles>, isTag = false) {
   const normalized = normalizeIngredientSearchText(name);
@@ -124,22 +143,25 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
   const results = useMemo(() => {
     if (!searchTerms.length || !data?.refrigerator) return [];
     const layout = getDraftLayout(data.refrigerator, [], t);
-    const matchingTags = new Map<string, { tags: IngredientTag[]; matchedTerms: Set<string> }>();
+    const tagsByIngredient = new Map<string, { tags: IngredientTag[]; candidates: Map<string, string[]> }>();
     if (isTagSearch) {
       for (const tag of data.tags) {
         const name = normalizeIngredientSearchText(tag.name);
         const terms = searchTerms.filter(term => name.includes(term));
-        if (!terms.length) continue;
-        const match = matchingTags.get(tag.ingredientId) ?? { tags: [], matchedTerms: new Set<string>() };
+        const match = tagsByIngredient.get(tag.ingredientId) ?? { tags: [], candidates: new Map<string, string[]>() };
         match.tags.push(tag);
-        for (const term of terms) match.matchedTerms.add(term);
-        matchingTags.set(tag.ingredientId, match);
+        for (const term of terms) {
+          const ids = match.candidates.get(term) ?? [];
+          ids.push(tag.id);
+          match.candidates.set(term, ids);
+        }
+        tagsByIngredient.set(tag.ingredientId, match);
       }
     }
     function findMatches(ingredients: Ingredient[], getPath: (ingredient: Ingredient) => string[] | null) {
       return ingredients.flatMap(ingredient => {
-        const tagMatch = matchingTags.get(ingredient.id);
-        const matches = isTagSearch ? tagMatch?.matchedTerms.size === searchTerms.length
+        const tagMatch = tagsByIngredient.get(ingredient.id);
+        const matches = isTagSearch ? !!tagMatch && matchesDistinctTags(searchTerms, tagMatch.candidates)
           : normalizeIngredientSearchText(ingredient.name).includes(searchTerms[0]);
         if (!matches) return [];
         const path = getPath(ingredient);
