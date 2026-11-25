@@ -321,6 +321,6 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   input: { minHeight: 46, color: colors.text, fontSize: 16, paddingRight: spacing.sm, paddingVertical: spacing.xs },
   tagInput: { marginLeft: -spacing.sm + 2 },
   tagInputText: { color: colors.chilled },
-  tagPlaceholder: { position: 'absolute', left: 0, color: colors.textMuted, fontSize: 16 },
+  tagPlaceholder: { position: 'absolute', left: 0, color: mode === 'dark' ? '#83A590' : colors.chilledPressed, fontSize: 16 },
   clearButton: { width: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
 }));
