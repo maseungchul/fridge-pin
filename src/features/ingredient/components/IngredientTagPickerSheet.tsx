@@ -117,9 +117,10 @@ export function IngredientTagPickerSheet({ sheetRef, tags, attachedIds, recentTa
         <View style={styles.headerSide} />
         <Text accessibilityRole="header" style={styles.title}>{t('tag.list')}</Text>
         <View style={styles.headerSide}>
-          <FeedbackPressable accessibilityRole="button" disabled={isCreating || selectedIds.size === 0}
+          <FeedbackPressable iconFeedback accessibilityRole="button" accessibilityLabel={t('tag.done')}
+            accessibilityState={{ disabled: isCreating || selectedIds.size === 0 }} disabled={isCreating || selectedIds.size === 0}
             style={styles.doneButton} onPress={() => close(true)}>
-            <Text style={styles.action}>{t('tag.done')}</Text>
+            <MaterialDesignIcons name="tag-arrow-left-outline" size={24} color={colors.text} accessible={false} />
           </FeedbackPressable>
         </View>
       </View>
