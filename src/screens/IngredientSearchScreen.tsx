@@ -28,6 +28,8 @@ import { useAppTheme } from '@/theme/ThemeProvider';
 import { TAG_ICON_GAP, createThemedStyles, spacing } from '@/theme/tokens';
 
 const SEARCH_DELAY_MS = 250;
+const SEARCH_ROW_HEIGHT = 46;
+const SEARCH_TEXT_LINE_HEIGHT = 22;
 const TAG_SEARCH_PREFIX = '# ';
 // 화면에는 아이콘을 보여주되, 백스페이스로 지울 수 있는 문자는 입력창에 남긴다.
 const TAG_SEARCH_MARKER = '\u200B';
@@ -314,14 +316,17 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   tagHighlightLine: { bottom: -1 },
   searchBar: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingLeft: spacing.sm,
     backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
-  searchFields: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm },
-  searchTag: { flexDirection: 'row', alignItems: 'center', gap: TAG_ICON_GAP, maxWidth: '100%', paddingVertical: spacing.xs },
-  searchTagText: { flexShrink: 1, fontSize: 16, color: colors.chilled },
+  searchFields: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm, rowGap: 4,
+    paddingVertical: (SEARCH_ROW_HEIGHT - SEARCH_TEXT_LINE_HEIGHT) / 2 },
+  searchTag: { minHeight: SEARCH_TEXT_LINE_HEIGHT, flexDirection: 'row', alignItems: 'center', gap: TAG_ICON_GAP, maxWidth: '100%' },
+  searchTagText: { flexShrink: 1, fontSize: 16, lineHeight: SEARCH_TEXT_LINE_HEIGHT, color: colors.chilled },
   activeSearchField: { flexGrow: 1, flexBasis: 100, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   inputContainer: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  input: { minHeight: 46, color: colors.text, fontSize: 16, paddingRight: spacing.sm, paddingVertical: spacing.xs },
+  input: { minHeight: SEARCH_TEXT_LINE_HEIGHT, color: colors.text, fontSize: 16, lineHeight: SEARCH_TEXT_LINE_HEIGHT,
+    paddingRight: spacing.sm, paddingVertical: 0 },
   tagInput: { marginLeft: TAG_ICON_GAP - spacing.sm },
   tagInputText: { color: colors.chilled },
-  tagPlaceholder: { position: 'absolute', left: 0, color: mode === 'dark' ? '#83A590' : colors.chilledPressed, fontSize: 16 },
+  tagPlaceholder: { position: 'absolute', left: 0, color: mode === 'dark' ? '#83A590' : colors.chilledPressed,
+    fontSize: 16, lineHeight: SEARCH_TEXT_LINE_HEIGHT },
   clearButton: { width: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
 }));
