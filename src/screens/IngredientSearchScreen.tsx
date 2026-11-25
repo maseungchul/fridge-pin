@@ -1,6 +1,6 @@
 /**
  * @file
- * 재료 이름과 태그를 검색하고 일치한 태그와 보관 위치를 표시한다.
+ * 검색 모드에 맞춰 재료 이름 또는 태그를 검색하고 보관 위치를 표시한다.
  * 선택한 재료 ID를 홈에 전달하면 홈이 현재 보관 위치를 찾아 연다.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -28,13 +28,18 @@ import { useAppTheme } from '@/theme/ThemeProvider';
 import { createThemedStyles, spacing } from '@/theme/tokens';
 
 const SEARCH_DELAY_MS = 250;
+const TAG_SEARCH_PREFIX = '# ';
+// 화면에는 아이콘을 보여주되, 백스페이스로 지울 수 있는 문자는 입력창에 남긴다.
+const TAG_SEARCH_MARKER = '\u200B';
+
+type SearchMode = 'name' | 'tag';
 
 type IngredientSearchScreenProps = NativeStackScreenProps<RootStackParamList, 'IngredientSearch'> & {
   onSelectIngredient: (id: string) => void;
 };
 
-/** 정규화로 문자 길이가 달라져도 화면에는 원래 재료명을 유지한다. */
-function highlightName(name: string, query: string, styles: ReturnType<typeof getStyles>) {
+/** 정규화로 문자 길이가 달라져도 화면에는 원래 재료명과 태그명을 유지한다. */
+function highlightName(name: string, query: string, styles: ReturnType<typeof getStyles>, isTag = false) {
   const normalized = normalizeIngredientSearchText(name);
   const ranges: { start: number; end: number }[] = [];
   let index = normalized.indexOf(query);
@@ -42,7 +47,7 @@ function highlightName(name: string, query: string, styles: ReturnType<typeof ge
     ranges.push({ start: index, end: index + query.length });
     index = normalized.indexOf(query, index + query.length);
   }
-  if (!ranges.length) return <Text style={styles.name}>{name}</Text>;
+  if (!ranges.length) return <Text style={isTag ? styles.matchTagText : styles.name}>{name}</Text>;
   const characters = Array.from(name);
   const parts: { text: string; matched: boolean }[] = [];
   let offset = 0;
@@ -56,8 +61,8 @@ function highlightName(name: string, query: string, styles: ReturnType<typeof ge
   }
   return parts.map((part, partIndex) => (
     <View key={partIndex} style={styles.namePart}>
-      <Text style={[styles.name, part.matched && styles.highlight]}>{part.text}</Text>
-      {part.matched ? <View pointerEvents="none" style={styles.highlightLine} /> : null}
+      <Text style={[isTag ? styles.matchTagText : styles.name, part.matched && styles.highlight]}>{part.text}</Text>
+      {part.matched ? <View pointerEvents="none" style={[styles.highlightLine, isTag && styles.tagHighlightLine]} /> : null}
     </View>
   ));
 }
@@ -74,10 +79,14 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   const leaving = useRef(false);
   const [query, setQuery] = useState('');
-  const [appliedQuery, setAppliedQuery] = useState('');
-  const normalizedQuery = normalizeIngredientSearchText(query);
-  const isPending = normalizedQuery !== appliedQuery;
-  const searchText = normalizedQuery ? appliedQuery : '';
+  const [appliedSearch, setAppliedSearch] = useState<{ mode: SearchMode; text: string } | null>(null);
+  const isTagSearch = query.startsWith(TAG_SEARCH_MARKER);
+  const searchMode: SearchMode = isTagSearch ? 'tag' : 'name';
+  const queryText = isTagSearch ? query.slice(TAG_SEARCH_MARKER.length) : query;
+  const normalizedQuery = normalizeIngredientSearchText(queryText);
+  const searchText = normalizedQuery && appliedSearch?.mode === searchMode ? appliedSearch.text : '';
+  const isPending = normalizedQuery !== searchText;
+  const searchLabel = t(isTagSearch ? 'search.tagPlaceholder' : 'search.placeholder');
 
   const loadIngredients = useCallback(() => runLoad(async isCurrent => {
     setHasError(false);
@@ -103,24 +112,27 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
 
   useEffect(() => {
     if (!normalizedQuery) return;
-    const timer = setTimeout(() => setAppliedQuery(normalizedQuery), SEARCH_DELAY_MS);
+    const timer = setTimeout(() => setAppliedSearch({ mode: searchMode, text: normalizedQuery }), SEARCH_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [normalizedQuery]);
+  }, [normalizedQuery, searchMode]);
 
   const results = useMemo(() => {
     if (!searchText || !data?.refrigerator) return [];
     const layout = getDraftLayout(data.refrigerator, [], t);
     const matchingTags = new Map<string, IngredientTag[]>();
-    for (const tag of data.tags) {
-      if (!normalizeIngredientSearchText(tag.name).includes(searchText)) continue;
-      const tags = matchingTags.get(tag.ingredientId) ?? [];
-      tags.push(tag);
-      matchingTags.set(tag.ingredientId, tags);
+    if (isTagSearch) {
+      for (const tag of data.tags) {
+        if (!normalizeIngredientSearchText(tag.name).includes(searchText)) continue;
+        const tags = matchingTags.get(tag.ingredientId) ?? [];
+        tags.push(tag);
+        matchingTags.set(tag.ingredientId, tags);
+      }
     }
     function findMatches(ingredients: Ingredient[], getPath: (ingredient: Ingredient) => string[] | null) {
       return ingredients.flatMap(ingredient => {
         const tags = matchingTags.get(ingredient.id) ?? [];
-        if (!tags.length && !normalizeIngredientSearchText(ingredient.name).includes(searchText)) return [];
+        const matches = isTagSearch ? tags.length > 0 : normalizeIngredientSearchText(ingredient.name).includes(searchText);
+        if (!matches) return [];
         const path = getPath(ingredient);
         return path ? [{ ingredient, path, tags }] : [];
       });
@@ -129,11 +141,15 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
       ...findMatches(data.ingredients, ingredient => getIngredientLocationPath(layout, ingredient, t)),
       ...findMatches(data.unassigned, () => [t('unassigned.label')]),
     ].sort((a, b) => a.ingredient.name.localeCompare(b.ingredient.name));
-  }, [data, searchText, t]);
+  }, [data, isTagSearch, searchText, t]);
 
   function changeQuery(value: string) {
-    setQuery(value);
-    if (!value.trim()) setAppliedQuery('');
+    const nextQuery = value.startsWith(TAG_SEARCH_PREFIX)
+      ? TAG_SEARCH_MARKER + value.slice(TAG_SEARCH_PREFIX.length) : value;
+    const nextIsTagSearch = nextQuery.startsWith(TAG_SEARCH_MARKER);
+    const nextText = nextIsTagSearch ? nextQuery.slice(TAG_SEARCH_MARKER.length) : nextQuery;
+    setQuery(nextQuery);
+    if (nextIsTagSearch !== isTagSearch || !nextText.trim()) setAppliedSearch(null);
   }
 
   function closeSearch(ingredientId?: string) {
@@ -154,11 +170,18 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
           </FeedbackPressable>
           <View style={styles.searchBar}>
             <MaterialDesignIcons name="magnify" size={22} color={colors.textMuted} accessible={false} />
-            <TextInput ref={input} value={query} onChangeText={changeQuery} style={styles.input} autoFocus={Platform.OS !== 'ios'}
-              accessibilityLabel={t('search.placeholder')} placeholder={t('search.placeholder')} placeholderTextColor={colors.textMuted}
-              keyboardAppearance={mode} autoCorrect={false} returnKeyType="done" />
-            {query ? <FeedbackPressable iconFeedback accessibilityRole="button" accessibilityLabel={t('search.clear')}
-              onPress={() => { changeQuery(''); input.current?.focus(); }} style={styles.clearButton}>
+            {isTagSearch ? <MaterialDesignIcons name="pound" size={18} color={colors.chilled} accessible={false} /> : null}
+            <View style={[styles.inputContainer, isTagSearch && styles.tagInput]}>
+              {isTagSearch && !queryText ? <Text pointerEvents="none" accessible={false} style={styles.tagPlaceholder}>{searchLabel}</Text> : null}
+              <TextInput ref={input} value={query} onChangeText={changeQuery} style={[styles.input, isTagSearch && styles.tagInputText]}
+                autoFocus={Platform.OS !== 'ios'} accessibilityLabel={searchLabel}
+                placeholder={searchLabel} placeholderTextColor={colors.textMuted}
+                keyboardAppearance={mode} autoCorrect={false} returnKeyType="done" />
+            </View>
+            {query ? <FeedbackPressable iconFeedback accessibilityRole="button"
+              accessibilityLabel={t(isTagSearch && !queryText ? 'search.exitTagMode' : 'search.clear')}
+              onPress={() => { changeQuery(isTagSearch && queryText ? TAG_SEARCH_MARKER : ''); input.current?.focus(); }}
+              style={styles.clearButton}>
               <MaterialDesignIcons name="close-circle-outline" size={22} color={colors.textMuted} accessible={false} />
             </FeedbackPressable> : null}
           </View>
@@ -183,13 +206,13 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
                     <View style={styles.result} accessible accessibilityLabel={[ingredient.name, ingredient.quantity, ...tags.map(tag => tag.name)].join(', ')}>
                       <View style={styles.resultDetails}>
                         <View style={styles.resultText}>
-                          {highlightName(ingredient.name, searchText, styles)}
+                          {isTagSearch ? <Text style={styles.name}>{ingredient.name}</Text> : highlightName(ingredient.name, searchText, styles)}
                           <Text style={styles.quantity}>{ingredient.quantity}</Text>
                         </View>
                         {tags.length > 0 ? <View style={styles.matchTags}>
                           {tags.map(tag => <View key={tag.id} style={styles.matchTag}>
-                            <MaterialDesignIcons name="pound" size={14} color={colors.chilled} accessible={false} />
-                            <Text style={styles.matchTagText}>{tag.name}</Text>
+                            <MaterialDesignIcons name="pound" size={14} color={colors.textMuted} accessible={false} />
+                            {highlightName(tag.name, searchText, styles, true)}
                           </View>)}
                         </View> : null}
                       </View>
@@ -198,7 +221,7 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
                   </FeedbackPressable>
                 );
               }} />
-          </> : appliedQuery && !isPending ? (
+          </> : searchText && !isPending ? (
             <Text style={styles.empty} accessibilityLiveRegion="polite">{t('search.noResults')}</Text>
           ) : null}
       </KeyboardAvoidingView>
@@ -226,15 +249,20 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   resultText: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' },
   matchTags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
   matchTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
-    borderRadius: 12, paddingHorizontal: spacing.xs, paddingVertical: 2 },
-  matchTagText: { color: colors.chilled, fontSize: 13, fontWeight: '600' },
+    borderRadius: 12, paddingHorizontal: spacing.xs, paddingVertical: 3 },
+  matchTagText: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
   name: { color: colors.text, fontSize: 16 },
   quantity: { color: colors.text, fontSize: 14, marginLeft: spacing.sm },
   namePart: { position: 'relative', flexShrink: 1 },
   highlight: { fontWeight: '700', color: colors.chilled },
   highlightLine: { position: 'absolute', left: 0, right: 0, bottom: -3, height: 1.5, borderRadius: 1, backgroundColor: colors.chilled },
+  tagHighlightLine: { bottom: -1 },
   searchBar: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingLeft: spacing.sm,
     backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
-  input: { flex: 1, minHeight: 46, color: colors.text, fontSize: 16, paddingRight: spacing.sm, paddingVertical: spacing.xs },
+  inputContainer: { flex: 1, minWidth: 0, justifyContent: 'center' },
+  input: { minHeight: 46, color: colors.text, fontSize: 16, paddingRight: spacing.sm, paddingVertical: spacing.xs },
+  tagInput: { marginLeft: -spacing.sm + 2 },
+  tagInputText: { color: colors.chilled },
+  tagPlaceholder: { position: 'absolute', left: 0, color: colors.textMuted, fontSize: 16 },
   clearButton: { width: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
 }));
