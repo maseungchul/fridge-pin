@@ -43,6 +43,11 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { t } = useTranslation();
+  const tabLabels = {
+    Home: t('tabs.fridge'),
+    Shopping: t('tabs.shopping'),
+    More: t('tabs.more'),
+  };
   const [isTabInteractionBlocked, setIsTabInteractionBlocked] = useState(false);
   const [shoppingAction, setShoppingAction] = useState<ShoppingSelectionActions | null>(null);
   const clearDeletedRefrigerator = useRef<(() => void) | null>(null);
@@ -96,9 +101,11 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
           inputRange: [-1, 0, 1], outputRange: [-width, 0, width],
         }) }] },
       }) : undefined,
+      title: tabLabels[route.name],
       tabBarLabelVisibilityMode: 'labeled',
+      tabBarAccessibilityLabel: tabLabels[route.name],
       tabBarLabelPosition: 'below-icon',
-      tabBarIconSize: 28,
+      tabBarIconSize: 34,
       tabBarIconStyle: styles.icon,
       tabBarIcon: ({ focused, color, size }) => (
         <View style={[styles.icon, focused && styles.selectedIcon]} pointerEvents="none">
@@ -136,21 +143,15 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
           style={[props.style, styles.button]} />
       ),
     })}>
-      <Tab.Screen name="Home" options={{
-        title: t('tabs.fridge'),
-      }}>
+      <Tab.Screen name="Home">
         {props => <HomeScreen {...props} onTabInteractionBlockedChange={setIsTabInteractionBlocked}
           clearDeletedRefrigeratorRef={clearDeletedRefrigerator}
           takeIngredientFormResult={takeIngredientFormResult} takeIngredientSearchResult={takeIngredientSearchResult} />}
       </Tab.Screen>
-      <Tab.Screen name="Shopping" options={{
-        title: t('tabs.shopping'),
-      }}>
+      <Tab.Screen name="Shopping">
         {props => <ShoppingScreen {...props} onSelectionModeChange={setShoppingAction} />}
       </Tab.Screen>
-      <Tab.Screen name="More" options={{
-        title: t('tabs.more'),
-      }}>
+      <Tab.Screen name="More">
         {() => <MoreStackNavigator onTabInteractionBlockedChange={setIsTabInteractionBlocked}
           onRefrigeratorDeleted={navigate => {
             clearDeletedRefrigerator.current?.();
@@ -174,12 +175,12 @@ const getStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   purchaseLabel: { color: colors.text, fontSize: 12, lineHeight: 16, textAlign: 'center', fontWeight: '600' },
   deleteLabel: { color: colors.error, fontSize: 12, lineHeight: 16, textAlign: 'center', fontWeight: '600' },
   item: { marginHorizontal: spacing.xs },
-  button: { minHeight: 48, borderRadius: 18, paddingTop: spacing.xs, paddingBottom: 0, justifyContent: 'center' },
-  // 선택 배경의 가로 공간을 확보하면서 기존 아이콘 슬롯 높이를 유지한다.
-  icon: { width: 44, height: 28, alignItems: 'center', justifyContent: 'center' },
-  shoppingIcon: { width: 32, height: 32, transform: [{ translateY: -1 }] },
-  selectedIcon: { borderRadius: 14, backgroundColor: colors.chipSelected },
-  label: { fontSize: 12, lineHeight: 16, fontWeight: '600', marginBottom: 0 },
+  button: { minHeight: 44, borderRadius: 18, paddingTop: 8, paddingBottom: 0, justifyContent: 'center' },
+  // 선택 배경 전체를 아이콘 슬롯에 넣어 아래 라벨과 겹치지 않게 한다.
+  icon: { width: 52, height: 36, alignItems: 'center', justifyContent: 'center' },
+  shoppingIcon: { width: 38, height: 38, transform: [{ translateY: -1 }] },
+  selectedIcon: { borderRadius: 18, backgroundColor: colors.chipSelected },
+  label: { fontSize: 12, lineHeight: 13, fontWeight: '600', marginTop: 1 },
   lightLabel: { fontWeight: '500', textAlign: 'center' },
   selectedLightLabel: { fontWeight: '700' },
 }));
