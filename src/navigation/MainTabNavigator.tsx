@@ -1,15 +1,16 @@
 /**
  * @file
- * 냉장고·장보기·더보기를 회색 배경과 녹색 강조를 사용하는 공통 하단 탭으로 전환한다.
+ * 냉장고·장보기·더보기를 공통 하단 탭으로 전환하고 선택한 탭의 아이콘 뒤를 녹색으로 강조한다.
  * 냉장고·재료·장보기 입력은 상위 Stack에서 열어 입력 중에는 탭을 표시하지 않는다.
  * 탭바에서 하단 안전 영역을 확보하고, 재료 패널·소비 기록 처리 중에는 탭 입력을 막는다.
  */
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { FeedbackPressable } from '@/components/FeedbackPressable';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { ShoppingScreen, type ShoppingSelectionActions } from '@/screens/ShoppingScreen';
@@ -26,6 +27,12 @@ export type MainTabParamList = {
 };
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
+const allowTabLabelFontScaling = !(Platform.OS === 'ios' && parseInt(Platform.Version, 10) >= 13);
+const tabIcons = {
+  Home: require('../../assets/tab-fridge.svg'),
+  Shopping: require('../../assets/tab-shopping.svg'),
+  More: require('../../assets/tab-more.svg'),
+};
 
 export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearchResult }: {
   takeIngredientFormResult: () => IngredientFormResult | null;
@@ -81,7 +88,7 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
       </View>
     ) : <BottomTabBar {...props} />} screenListeners={{
       tabPress: () => setIsDeleteTransition(false),
-    }} screenOptions={{
+    }} screenOptions={({ route }) => ({
       headerShown: false,
       animation: isDeleteTransition ? 'shift' : 'none',
       sceneStyleInterpolator: isDeleteTransition ? ({ current }) => ({
@@ -93,10 +100,22 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
       tabBarLabelPosition: 'below-icon',
       tabBarIconSize: 28,
       tabBarIconStyle: styles.icon,
+      tabBarIcon: ({ focused, color, size }) => (
+        <View style={[styles.icon, focused && styles.selectedIcon]} pointerEvents="none">
+          <Image source={tabIcons[route.name]} style={[{ width: size, height: size }, route.name === 'Shopping' && styles.shoppingIcon]}
+            contentFit="contain" tintColor={color} accessible={false} />
+        </View>
+      ),
       tabBarActiveTintColor: colors.chilled,
       tabBarInactiveTintColor: colors.textMuted,
       tabBarActiveBackgroundColor: 'transparent',
       tabBarLabelStyle: styles.label,
+      tabBarLabel: mode === 'light' ? ({ focused, color, children }) => (
+        <Text numberOfLines={1} allowFontScaling={allowTabLabelFontScaling}
+          style={[styles.label, styles.lightLabel, { color }, focused && styles.selectedLightLabel]}>
+          {children}
+        </Text>
+      ) : undefined,
       tabBarItemStyle: styles.item,
       sceneStyle: styles.scene,
       tabBarStyle: [styles.tabBar, {
@@ -116,12 +135,9 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
           importantForAccessibility={isTabInteractionBlocked ? 'no-hide-descendants' : 'auto'}
           style={[props.style, styles.button]} />
       ),
-    }}>
+    })}>
       <Tab.Screen name="Home" options={{
         title: t('tabs.fridge'),
-        tabBarIcon: ({ focused, color, size }) => (
-          <MaterialDesignIcons name={focused ? 'fridge' : 'fridge-outline'} size={size} color={color} accessible={false} />
-        ),
       }}>
         {props => <HomeScreen {...props} onTabInteractionBlockedChange={setIsTabInteractionBlocked}
           clearDeletedRefrigeratorRef={clearDeletedRefrigerator}
@@ -129,17 +145,11 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
       </Tab.Screen>
       <Tab.Screen name="Shopping" options={{
         title: t('tabs.shopping'),
-        tabBarIcon: ({ focused, color, size }) => (
-          <MaterialDesignIcons name={focused ? 'cart' : 'cart-outline'} size={size} color={color} accessible={false} />
-        ),
       }}>
         {props => <ShoppingScreen {...props} onSelectionModeChange={setShoppingAction} />}
       </Tab.Screen>
       <Tab.Screen name="More" options={{
         title: t('tabs.more'),
-        tabBarIcon: ({ focused, color, size }) => (
-          <MaterialDesignIcons name={focused ? 'dots-horizontal-circle' : 'dots-horizontal-circle-outline'} size={size} color={color} accessible={false} />
-        ),
       }}>
         {() => <MoreStackNavigator onTabInteractionBlockedChange={setIsTabInteractionBlocked}
           onRefrigeratorDeleted={navigate => {
@@ -165,7 +175,11 @@ const getStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   deleteLabel: { color: colors.error, fontSize: 12, lineHeight: 16, textAlign: 'center', fontWeight: '600' },
   item: { marginHorizontal: spacing.xs },
   button: { minHeight: 48, borderRadius: 18, paddingTop: spacing.xs, paddingBottom: 0, justifyContent: 'center' },
-  // 아이콘 슬롯을 실제 크기로 맞춰 탭바 높이를 늘리지 않고 상단 여백을 확보한다.
-  icon: { height: 28 },
+  // 선택 배경의 가로 공간을 확보하면서 기존 아이콘 슬롯 높이를 유지한다.
+  icon: { width: 44, height: 28, alignItems: 'center', justifyContent: 'center' },
+  shoppingIcon: { width: 32, height: 32, transform: [{ translateY: -1 }] },
+  selectedIcon: { borderRadius: 14, backgroundColor: colors.chipSelected },
   label: { fontSize: 12, lineHeight: 16, fontWeight: '600', marginBottom: 0 },
+  lightLabel: { fontWeight: '500', textAlign: 'center' },
+  selectedLightLabel: { fontWeight: '700' },
 }));
