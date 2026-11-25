@@ -47,6 +47,7 @@ export const ko = {
   'shopping.invalidInput': '품목명은 1~20자, 수량은 1~10자, 메모는 100자 이내로 입력해 주세요.',
   'more.back': '더보기로 돌아가기',
   'more.fridgeManagement': '냉장고 관리',
+  'more.ingredientManagement': '재료 관리',
   'settings.title': '설정',
   'settings.theme': '테마',
   'settings.themeSystem': '시스템 설정',

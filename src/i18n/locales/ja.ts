@@ -49,6 +49,7 @@ export const ja: Record<keyof typeof ko, string> = {
   'shopping.invalidInput': '品名は1〜20文字、数量は1〜10文字、メモは100文字以内で入力してください。',
   'more.back': 'その他に戻る',
   'more.fridgeManagement': '冷蔵庫の管理',
+  'more.ingredientManagement': '食材の管理',
   'settings.title': '設定',
   'settings.theme': 'テーマ',
   'settings.themeSystem': 'システム設定',

@@ -115,7 +115,7 @@ export function MoreScreen({ navigation, onTabInteractionBlockedChange, onRefrig
         ))}
           <View style={styles.sectionSeparator}>
             <View style={styles.sectionHeader}>
-              <Text accessibilityRole="header" style={styles.sectionTitle}>{t('more.fridgeManagement')}</Text>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>{t('more.ingredientManagement')}</Text>
             </View>
             <View style={styles.menu}>
               <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('tag.manageTitle')}
@@ -123,6 +123,13 @@ export function MoreScreen({ navigation, onTabInteractionBlockedChange, onRefrig
                 <MaterialDesignIcons name="tag-outline" size={24} color={colors.textMuted} accessible={false} />
                 <Text style={styles.itemLabel}>{t('tag.manageTitle')}</Text>
               </FeedbackPressable>
+            </View>
+          </View>
+          <View style={styles.sectionSeparator}>
+            <View style={styles.sectionHeader}>
+              <Text accessibilityRole="header" style={styles.sectionTitle}>{t('more.fridgeManagement')}</Text>
+            </View>
+            <View style={styles.menu}>
               <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('fridge.delete')}
                 disabled={!refrigerator} interactionBlocked={isDeleting} accessibilityState={{ disabled: !refrigerator || isDeleting }} feedback="danger"
                 onPress={requestDelete} style={styles.item}>
