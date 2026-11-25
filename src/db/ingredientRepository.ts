@@ -6,6 +6,7 @@
 import { uuid } from 'expo';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { prepareIngredientRegistration } from '@/db/ingredientRegistration';
+import { replaceIngredientTags } from '@/db/ingredientTagRepository';
 import type { ConsumedIngredient, Ingredient } from '@/features/ingredient/model/ingredient';
 import { INGREDIENT_NAME_MAX_LENGTH, INGREDIENT_QUANTITY_MAX_LENGTH } from '@/features/ingredient/model/ingredient';
 import { AppError } from '@/i18n/errors';
@@ -132,8 +133,13 @@ export function getIngredientsByPosition(db: SQLiteDatabase, position: Pick<Ingr
   `, position.slotId, position.drawerNumber);
 }
 
-export async function registerIngredient(db: SQLiteDatabase, input: Omit<Ingredient, 'id'>): Promise<Ingredient> {
-  const ingredient = await insertIngredient(db, input);
+export async function registerIngredient(db: SQLiteDatabase, input: Omit<Ingredient, 'id'>,
+  tagIds: readonly string[] = []): Promise<Ingredient> {
+  const ingredient = prepareIngredientRegistration(input, uuid.v4);
+  await db.withExclusiveTransactionAsync(async transaction => {
+    await writeIngredient(transaction, ingredient);
+    await replaceIngredientTags(transaction, ingredient.id, tagIds);
+  });
   notifyIngredientChanges(db);
   return ingredient;
 }
@@ -141,28 +147,35 @@ export async function registerIngredient(db: SQLiteDatabase, input: Omit<Ingredi
 /** 다른 작업과 같은 트랜잭션에서 사용할 수 있도록 재료만 저장한다. */
 export async function insertIngredient(db: SQLiteDatabase, input: Omit<Ingredient, 'id'>): Promise<Ingredient> {
   const ingredient = prepareIngredientRegistration(input, uuid.v4);
+  await writeIngredient(db, ingredient);
+  return ingredient;
+}
+
+async function writeIngredient(db: SQLiteDatabase, ingredient: Ingredient) {
   await db.runAsync(`
     INSERT INTO ingredients (id, name, quantity, memo, expiration_date, slot_id, drawer_number)
     VALUES (?, ?, ?, ?, ?, ?, ?);
   `, ingredient.id, ingredient.name, ingredient.quantity, ingredient.memo, ingredient.expirationDate,
   ingredient.slotId, ingredient.drawerNumber);
-  return ingredient;
 }
 
 /** 기존 제한보다 긴 값은 변경하지 않은 경우에만 유지하며 재료의 기본 정보를 수정한다. */
-export async function updateIngredient(db: SQLiteDatabase, input: Ingredient): Promise<Ingredient> {
+export async function updateIngredient(db: SQLiteDatabase, input: Ingredient, tagIds?: readonly string[]): Promise<Ingredient> {
   const existing = input.name.trim().length > INGREDIENT_NAME_MAX_LENGTH || input.quantity.trim().length > INGREDIENT_QUANTITY_MAX_LENGTH
     ? await db.getFirstAsync<Pick<Ingredient, 'name' | 'quantity'>>(
       'SELECT name, quantity FROM ingredients WHERE id = ? AND slot_id = ? AND drawer_number = ?',
       input.id, input.slotId, input.drawerNumber)
     : null;
   const ingredient = prepareIngredientRegistration(input, () => input.id, existing);
-  const result = await db.runAsync(`
-    UPDATE ingredients SET name = ?, quantity = ?, memo = ?, expiration_date = ?
-    WHERE id = ? AND slot_id = ? AND drawer_number = ?;
-  `, ingredient.name, ingredient.quantity, ingredient.memo, ingredient.expirationDate,
-  ingredient.id, ingredient.slotId, ingredient.drawerNumber);
-  if (result.changes !== 1) throw new AppError('errors.ingredientUpdateMissing');
+  await db.withExclusiveTransactionAsync(async transaction => {
+    const result = await transaction.runAsync(`
+      UPDATE ingredients SET name = ?, quantity = ?, memo = ?, expiration_date = ?
+      WHERE id = ? AND slot_id = ? AND drawer_number = ?;
+    `, ingredient.name, ingredient.quantity, ingredient.memo, ingredient.expirationDate,
+    ingredient.id, ingredient.slotId, ingredient.drawerNumber);
+    if (result.changes !== 1) throw new AppError('errors.ingredientUpdateMissing');
+    if (tagIds !== undefined) await replaceIngredientTags(transaction, ingredient.id, tagIds);
+  });
   notifyIngredientChanges(db);
   return ingredient;
 }

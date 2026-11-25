@@ -4,7 +4,7 @@
  * 시작 높이·높이 변경을 호출자와 공유하고, 닫기 애니메이션이 끝난 뒤 호출자에게 알린다.
  */
 import { BottomSheetBackdrop, BottomSheetModal, useBottomSheetInternal } from '@gorhom/bottom-sheet';
-import type { BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
+import type { BottomSheetBackdropProps, BottomSheetModalProps } from '@gorhom/bottom-sheet';
 import { useCallback, useEffect, useImperativeHandle, useRef } from 'react';
 import type { PropsWithChildren, ReactNode, Ref } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -23,6 +23,8 @@ export interface BottomSheetProps {
   header?: ReactNode;
   disabled: boolean;
   initialIndex?: number;
+  snapPoints?: BottomSheetModalProps['snapPoints'];
+  keyboardBlurBehavior?: BottomSheetModalProps['keyboardBlurBehavior'];
   onIndexChange?: (index: number) => void;
   onClose: () => void;
 }
@@ -55,7 +57,8 @@ function SheetContent({ children, onClose }: PropsWithChildren<{
   );
 }
 
-export function BottomSheet({ ref, children, header, disabled, initialIndex = 0, onIndexChange, onClose }: BottomSheetProps) {
+export function BottomSheet({ ref, children, header, disabled, initialIndex = 0, snapPoints = SNAP_POINTS,
+  keyboardBlurBehavior, onIndexChange, onClose }: BottomSheetProps) {
   const { mode } = useAppTheme();
   const styles = getStyles(mode);
   const sheetRef = useRef<BottomSheetModal>(null);
@@ -76,7 +79,7 @@ export function BottomSheet({ ref, children, header, disabled, initialIndex = 0,
       pressBehavior={disabled ? 'none' : 'close'} opacity={1} accessible={false}
       style={[props.style, styles.backdrop]} />
   ), [disabled, styles.backdrop]);
-  // 제목과 고정 드래그 바만 손잡이로 사용해 목록 최상단의 아래 스와이프도 스크롤로 처리한다.
+  // 기본 패널은 제목과 드래그 바를 손잡이로 사용한다.
   const renderHandle = useCallback(() => (
     <View onAccessibilityEscape={close}>
       <View style={styles.dragIndicator} pointerEvents="none" accessible={false} />
@@ -84,7 +87,7 @@ export function BottomSheet({ ref, children, header, disabled, initialIndex = 0,
     </View>
   ), [header, close, styles.dragIndicator]);
   return (
-    <BottomSheetModal ref={sheetRef} index={initialIndex} snapPoints={SNAP_POINTS}
+    <BottomSheetModal ref={sheetRef} index={initialIndex} snapPoints={snapPoints} keyboardBlurBehavior={keyboardBlurBehavior}
       animationConfigs={TRANSITION_ANIMATION}
       topInset={insets.top} handleComponent={renderHandle} backdropComponent={renderBackdrop}
       containerComponent={SheetContainer}

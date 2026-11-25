@@ -6,7 +6,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { AppError } from '@/i18n/errors';
 
-const DATABASE_VERSION = 11;
+const DATABASE_VERSION = 12;
 
 const INGREDIENT_TABLE_SQL = `CREATE TABLE IF NOT EXISTS ingredients (
   id TEXT PRIMARY KEY NOT NULL,
@@ -63,6 +63,7 @@ export async function initializeDatabase(db: SQLiteDatabase) {
       if (version === 8 || version === 9) await db.execAsync('ALTER TABLE shopping_items ADD COLUMN purchased_at TEXT;');
       else await createShoppingItemsTable(db);
       await createUnassignedIngredientsTable(db);
+      await createIngredientTagTables(db);
       const violation = await db.getFirstAsync('PRAGMA foreign_key_check;');
       if (violation) throw new AppError('errors.databaseConnections');
       await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
@@ -106,6 +107,7 @@ async function recoverTemporaryVersion6(db: SQLiteDatabase) {
       SELECT id, name, quantity, expiration_date, slot_id, drawer_number, memo FROM recovery_v6_ingredients;
     DROP TABLE recovery_v6_ingredients;
   `);
+  await createIngredientTagTables(db);
   const violation = await db.getFirstAsync('PRAGMA foreign_key_check;');
   if (violation) throw new AppError('errors.databaseConnections');
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION};`);
@@ -151,6 +153,32 @@ async function createUnassignedIngredientsTable(db: SQLiteDatabase) {
       slot_number INTEGER NOT NULL,
       is_body INTEGER NOT NULL CHECK (is_body IN (0, 1))
     );
+  `);
+}
+
+/** 같은 UUID로 상태를 옮길 때는 태그를 보존하고, 마지막 기록 삭제 때만 연결을 정리한다. */
+async function createIngredientTagTables(db: SQLiteDatabase) {
+  const ingredientTables = ['ingredients', 'unassigned_ingredients', 'consumed_ingredients'];
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS tags (
+      id TEXT PRIMARY KEY NOT NULL,
+      name TEXT NOT NULL CHECK (length(trim(name)) BETWEEN 1 AND 20),
+      name_key TEXT NOT NULL UNIQUE CHECK (length(name_key) > 0)
+    );
+    CREATE TABLE IF NOT EXISTS ingredient_tags (
+      ingredient_id TEXT NOT NULL,
+      tag_id TEXT NOT NULL REFERENCES tags (id) ON DELETE CASCADE,
+      PRIMARY KEY (ingredient_id, tag_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_ingredient_tags_tag ON ingredient_tags (tag_id);
+    ${ingredientTables.map(table => `
+      CREATE TRIGGER IF NOT EXISTS cleanup_${table}_tags AFTER DELETE ON ${table}
+      WHEN ${ingredientTables.filter(other => other !== table)
+        .map(other => `NOT EXISTS (SELECT 1 FROM ${other} WHERE id = OLD.id)`).join(' AND ')}
+      BEGIN
+        DELETE FROM ingredient_tags WHERE ingredient_id = OLD.id;
+      END;
+    `).join('')}
   `);
 }
 

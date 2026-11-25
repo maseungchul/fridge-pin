@@ -1,6 +1,6 @@
 /**
  * @file
- * 재료 이름을 검색하고 보관 위치와 유통기한을 표시한다.
+ * 재료 이름과 태그를 검색하고 일치한 태그와 보관 위치를 표시한다.
  * 선택한 재료 ID를 홈에 전달하면 홈이 현재 보관 위치를 찾아 연다.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -12,12 +12,14 @@ import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-
 import { FeedbackPressable } from '@/components/FeedbackPressable';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { getIngredients, getUnassignedIngredients } from '@/db/ingredientRepository';
+import { getSearchableIngredientTags } from '@/db/ingredientTagRepository';
 import { getRefrigerator } from '@/db/refrigeratorRepository';
 import { useSQLiteContext } from 'expo-sqlite';
 import { getDraftLayout, getIngredientLocationPath } from '@/features/fridge/model/fridgeLayout';
 import type { Refrigerator } from '@/features/fridge/model/fridgeLayout';
 import { IngredientLocationBreadcrumb } from '@/features/ingredient/components/IngredientLocationBreadcrumb';
-import type { Ingredient } from '@/features/ingredient/model/ingredient';
+import { normalizeIngredientSearchText } from '@/features/ingredient/model/ingredient';
+import type { Ingredient, IngredientTag } from '@/features/ingredient/model/ingredient';
 import { useTranslation } from '@/i18n/LanguageProvider';
 import { useDelayedLoading } from '@/hooks/useDelayedLoading';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
@@ -31,13 +33,9 @@ type IngredientSearchScreenProps = NativeStackScreenProps<RootStackParamList, 'I
   onSelectIngredient: (id: string) => void;
 };
 
-function normalizeSearchText(text: string) {
-  return text.trim().normalize('NFKC').toLowerCase();
-}
-
 /** 정규화로 문자 길이가 달라져도 화면에는 원래 재료명을 유지한다. */
 function highlightName(name: string, query: string, styles: ReturnType<typeof getStyles>) {
-  const normalized = normalizeSearchText(name);
+  const normalized = normalizeIngredientSearchText(name);
   const ranges: { start: number; end: number }[] = [];
   let index = normalized.indexOf(query);
   while (index !== -1) {
@@ -70,13 +68,14 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
   const { t } = useTranslation();
   const db = useSQLiteContext();
   const { showLoading, runLoad } = useDelayedLoading();
-  const [data, setData] = useState<{ refrigerator: Refrigerator | null; ingredients: Ingredient[]; unassigned: Ingredient[] } | null>(null);
+  const [data, setData] = useState<{ refrigerator: Refrigerator | null; ingredients: Ingredient[]; unassigned: Ingredient[];
+    tags: (IngredientTag & { ingredientId: string })[] } | null>(null);
   const [hasError, setHasError] = useState(false);
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   const leaving = useRef(false);
   const [query, setQuery] = useState('');
   const [appliedQuery, setAppliedQuery] = useState('');
-  const normalizedQuery = normalizeSearchText(query);
+  const normalizedQuery = normalizeIngredientSearchText(query);
   const isPending = normalizedQuery !== appliedQuery;
   const searchText = normalizedQuery ? appliedQuery : '';
 
@@ -84,8 +83,9 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
     setHasError(false);
     try {
       const refrigerator = await getRefrigerator(db);
-      const [ingredients, unassigned] = refrigerator ? await Promise.all([getIngredients(db), getUnassignedIngredients(db)]) : [[], []];
-      if (isCurrent()) setData({ refrigerator, ingredients, unassigned });
+      const [ingredients, unassigned, tags] = refrigerator
+        ? await Promise.all([getIngredients(db), getUnassignedIngredients(db), getSearchableIngredientTags(db)]) : [[], [], []];
+      if (isCurrent()) setData({ refrigerator, ingredients, unassigned, tags });
     } catch {
       if (isCurrent()) setHasError(true);
     }
@@ -110,14 +110,25 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
   const results = useMemo(() => {
     if (!searchText || !data?.refrigerator) return [];
     const layout = getDraftLayout(data.refrigerator, [], t);
-    const placed = data.ingredients.flatMap(ingredient => {
-      if (!normalizeSearchText(ingredient.name).includes(searchText)) return [];
-      const path = getIngredientLocationPath(layout, ingredient, t);
-      return path ? [{ ingredient, path }] : [];
-    });
-    const unassigned = data.unassigned.filter(item => normalizeSearchText(item.name).includes(searchText))
-      .map(ingredient => ({ ingredient, path: [t('unassigned.label')] }));
-    return [...placed, ...unassigned].sort((a, b) => a.ingredient.name.localeCompare(b.ingredient.name));
+    const matchingTags = new Map<string, IngredientTag[]>();
+    for (const tag of data.tags) {
+      if (!normalizeIngredientSearchText(tag.name).includes(searchText)) continue;
+      const tags = matchingTags.get(tag.ingredientId) ?? [];
+      tags.push(tag);
+      matchingTags.set(tag.ingredientId, tags);
+    }
+    function findMatches(ingredients: Ingredient[], getPath: (ingredient: Ingredient) => string[] | null) {
+      return ingredients.flatMap(ingredient => {
+        const tags = matchingTags.get(ingredient.id) ?? [];
+        if (!tags.length && !normalizeIngredientSearchText(ingredient.name).includes(searchText)) return [];
+        const path = getPath(ingredient);
+        return path ? [{ ingredient, path, tags }] : [];
+      });
+    }
+    return [
+      ...findMatches(data.ingredients, ingredient => getIngredientLocationPath(layout, ingredient, t)),
+      ...findMatches(data.unassigned, () => [t('unassigned.label')]),
+    ].sort((a, b) => a.ingredient.name.localeCompare(b.ingredient.name));
   }, [data, searchText, t]);
 
   function changeQuery(value: string) {
@@ -164,15 +175,23 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
             </View>
             <FlatList data={results} keyExtractor={item => item.ingredient.id} style={styles.list}
               keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag"
-              renderItem={({ item: { ingredient, path } }) => {
+              renderItem={({ item: { ingredient, path, tags } }) => {
                 return (
                   <FeedbackPressable accessibilityRole="button" accessibilityState={{ disabled: isPending }} interactionBlocked={isPending}
                     onPress={() => closeSearch(ingredient.id)}>
                     <IngredientLocationBreadcrumb path={path} />
-                    <View style={styles.result} accessible accessibilityLabel={`${ingredient.name}, ${ingredient.quantity}`}>
-                      <View style={styles.resultText}>
-                        {highlightName(ingredient.name, searchText, styles)}
-                        <Text style={styles.quantity}>{ingredient.quantity}</Text>
+                    <View style={styles.result} accessible accessibilityLabel={[ingredient.name, ingredient.quantity, ...tags.map(tag => tag.name)].join(', ')}>
+                      <View style={styles.resultDetails}>
+                        <View style={styles.resultText}>
+                          {highlightName(ingredient.name, searchText, styles)}
+                          <Text style={styles.quantity}>{ingredient.quantity}</Text>
+                        </View>
+                        {tags.length > 0 ? <View style={styles.matchTags}>
+                          {tags.map(tag => <View key={tag.id} style={styles.matchTag}>
+                            <MaterialDesignIcons name="pound" size={14} color={colors.chilled} accessible={false} />
+                            <Text style={styles.matchTagText}>{tag.name}</Text>
+                          </View>)}
+                        </View> : null}
                       </View>
                       <MaterialDesignIcons name="map-marker-right-outline" size={22} color={colors.textMuted} accessible={false} />
                     </View>
@@ -203,7 +222,12 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   empty: { color: colors.textMuted, textAlign: 'center', padding: spacing.lg },
   result: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md,
     paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  resultText: { flex: 1, minWidth: 0, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' },
+  resultDetails: { flex: 1, minWidth: 0 },
+  resultText: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline' },
+  matchTags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
+  matchTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface,
+    borderRadius: 12, paddingHorizontal: spacing.xs, paddingVertical: 2 },
+  matchTagText: { color: colors.chilled, fontSize: 13, fontWeight: '600' },
   name: { color: colors.text, fontSize: 16 },
   quantity: { color: colors.text, fontSize: 14, marginLeft: spacing.sm },
   namePart: { position: 'relative', flexShrink: 1 },

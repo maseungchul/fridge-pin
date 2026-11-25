@@ -5,11 +5,13 @@
  */
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MoreScreen } from '@/screens/MoreScreen';
+import { IngredientTagManagementScreen } from '@/screens/IngredientTagManagementScreen';
 import { SettingsScreen } from '@/screens/SettingsScreen';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
 export type MoreStackParamList = {
   MoreHome: undefined;
+  IngredientTags: undefined;
   Settings: { section: 'language' | 'theme' | 'expirationReminder' } | undefined;
 };
 
@@ -31,6 +33,7 @@ export function MoreStackNavigator({ onTabInteractionBlockedChange, onRefrigerat
           onRefrigeratorDeleted={onRefrigeratorDeleted} />}
       </Stack.Screen>
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="IngredientTags" component={IngredientTagManagementScreen} />
     </Stack.Navigator>
   );
 }

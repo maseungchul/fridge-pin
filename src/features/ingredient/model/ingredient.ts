@@ -9,6 +9,17 @@ import type { Translator } from '@/i18n/translations';
 export const INGREDIENT_NAME_MAX_LENGTH = 20;
 export const INGREDIENT_QUANTITY_MAX_LENGTH = 10;
 export const INGREDIENT_MEMO_MAX_LENGTH = 100;
+export const INGREDIENT_TAG_NAME_MAX_LENGTH = 20;
+
+export interface IngredientTag {
+  id: string;
+  name: string;
+}
+
+/** 검색과 태그 중복 검사는 전각 문자와 영문 대소문자를 같은 값으로 비교한다. */
+export function normalizeIngredientSearchText(text: string) {
+  return text.trim().normalize('NFKC').toLowerCase();
+}
 
 export interface Ingredient {
   id: string;
