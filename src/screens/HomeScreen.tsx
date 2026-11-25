@@ -8,7 +8,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { RefObject } from 'react';
+import type { ComponentRef, RefObject } from 'react';
 import { MaskedView } from '@expo/ui/community/masked-view';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { ActivityIndicator, Animated, AppState, BackHandler, Easing, ScrollView, StyleSheet, Text, View, useAnimatedValue, useWindowDimensions } from 'react-native';
@@ -107,6 +107,12 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
   const toolbarHeight = Math.max(HOME_MENU_SIZE, toolbarLabelHeight + toolbarButtonInsets) + spacing.sm * 2;
   const toolbarProgress = useAnimatedValue(1);
   const toolbarChanging = useRef(false);
+  const toolbarScroll = useRef<ComponentRef<typeof ScrollView>>(null);
+  const toolbarInitiallyScrolled = useRef(false);
+  const setToolbarScroll = useCallback((node: ComponentRef<typeof ScrollView> | null) => {
+    toolbarScroll.current = node;
+    if (!node) toolbarInitiallyScrolled.current = false;
+  }, []);
   const closedScrollY = useRef(0);
   const isFocusBlocked = useCallback(() => toolbarChanging.current, []);
   const isSheetOpen = isIngredientListOpen || openLocationList !== null || isConsumedOpen;
@@ -389,9 +395,15 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                   importantForAccessibility={canUseToolbar ? 'auto' : 'no-hide-descendants'}>
                   <MaskedView style={[styles.toolbarMask, { width: toolbarContentWidth || '100%', height: toolbarHeight }]}
                     pointerEvents="box-none" maskElement={<View style={styles.toolbarCutout} />}>
-                    <Animated.ScrollView horizontal showsHorizontalScrollIndicator={false} alwaysBounceHorizontal={false}
+                    <Animated.ScrollView ref={setToolbarScroll} horizontal showsHorizontalScrollIndicator={false} alwaysBounceHorizontal={false}
                       contentContainerStyle={[styles.actions, styles.homeActions]}
-                      onContentSizeChange={setToolbarContentWidth}
+                      onContentSizeChange={width => {
+                        setToolbarContentWidth(width);
+                        if (!toolbarInitiallyScrolled.current) {
+                          toolbarScroll.current?.scrollToEnd({ animated: false });
+                          toolbarInitiallyScrolled.current = true;
+                        }
+                      }}
                       style={{ opacity: toolbarProgress,
                         transform: [{ translateX: toolbarProgress.interpolate({ inputRange: [0, 1], outputRange: [toolbarWidth, 0] }) }],
                       }}
