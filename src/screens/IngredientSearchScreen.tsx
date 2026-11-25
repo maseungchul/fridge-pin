@@ -33,19 +33,22 @@ const TAG_SEARCH_PREFIX = '# ';
 const TAG_SEARCH_MARKER = '\u200B';
 
 type SearchMode = 'name' | 'tag';
+const EMPTY_TERMS: readonly string[] = [];
 
 type IngredientSearchScreenProps = NativeStackScreenProps<RootStackParamList, 'IngredientSearch'> & {
   onSelectIngredient: (id: string) => void;
 };
 
 /** 정규화로 문자 길이가 달라져도 화면에는 원래 재료명과 태그명을 유지한다. */
-function highlightName(name: string, query: string, styles: ReturnType<typeof getStyles>, isTag = false) {
+function highlightName(name: string, queries: readonly string[], styles: ReturnType<typeof getStyles>, isTag = false) {
   const normalized = normalizeIngredientSearchText(name);
   const ranges: { start: number; end: number }[] = [];
-  let index = normalized.indexOf(query);
-  while (index !== -1) {
-    ranges.push({ start: index, end: index + query.length });
-    index = normalized.indexOf(query, index + query.length);
+  for (const query of queries) {
+    let index = normalized.indexOf(query);
+    while (index !== -1) {
+      ranges.push({ start: index, end: index + query.length });
+      index = normalized.indexOf(query, index + query.length);
+    }
   }
   if (!ranges.length) return <Text style={isTag ? styles.matchTagText : styles.name}>{name}</Text>;
   const characters = Array.from(name);
@@ -79,13 +82,15 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
   const input = useRef<ComponentRef<typeof TextInput>>(null);
   const leaving = useRef(false);
   const [query, setQuery] = useState('');
-  const [appliedSearch, setAppliedSearch] = useState<{ mode: SearchMode; text: string } | null>(null);
+  const [completedTagTerms, setCompletedTagTerms] = useState<string[]>([]);
+  const [appliedSearch, setAppliedSearch] = useState<{ mode: SearchMode; terms: readonly string[] } | null>(null);
   const isTagSearch = query.startsWith(TAG_SEARCH_MARKER);
   const searchMode: SearchMode = isTagSearch ? 'tag' : 'name';
   const queryText = isTagSearch ? query.slice(TAG_SEARCH_MARKER.length) : query;
-  const normalizedQuery = normalizeIngredientSearchText(queryText);
-  const searchText = normalizedQuery && appliedSearch?.mode === searchMode ? appliedSearch.text : '';
-  const isPending = normalizedQuery !== searchText;
+  const currentTerms = useMemo(() => [...new Set([...completedTagTerms, queryText]
+    .map(normalizeIngredientSearchText).filter(Boolean))], [completedTagTerms, queryText]);
+  const searchTerms = currentTerms.length && appliedSearch?.mode === searchMode ? appliedSearch.terms : EMPTY_TERMS;
+  const isPending = currentTerms.length !== searchTerms.length || currentTerms.some((term, index) => term !== searchTerms[index]);
   const searchLabel = t(isTagSearch ? 'search.tagPlaceholder' : 'search.placeholder');
 
   const loadIngredients = useCallback(() => runLoad(async isCurrent => {
@@ -111,45 +116,62 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
   }, [navigation]);
 
   useEffect(() => {
-    if (!normalizedQuery) return;
-    const timer = setTimeout(() => setAppliedSearch({ mode: searchMode, text: normalizedQuery }), SEARCH_DELAY_MS);
+    if (!currentTerms.length) return;
+    const timer = setTimeout(() => setAppliedSearch({ mode: searchMode, terms: currentTerms }), SEARCH_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [normalizedQuery, searchMode]);
+  }, [currentTerms, searchMode]);
 
   const results = useMemo(() => {
-    if (!searchText || !data?.refrigerator) return [];
+    if (!searchTerms.length || !data?.refrigerator) return [];
     const layout = getDraftLayout(data.refrigerator, [], t);
-    const matchingTags = new Map<string, IngredientTag[]>();
+    const matchingTags = new Map<string, { tags: IngredientTag[]; matchedTerms: Set<string> }>();
     if (isTagSearch) {
       for (const tag of data.tags) {
-        if (!normalizeIngredientSearchText(tag.name).includes(searchText)) continue;
-        const tags = matchingTags.get(tag.ingredientId) ?? [];
-        tags.push(tag);
-        matchingTags.set(tag.ingredientId, tags);
+        const name = normalizeIngredientSearchText(tag.name);
+        const terms = searchTerms.filter(term => name.includes(term));
+        if (!terms.length) continue;
+        const match = matchingTags.get(tag.ingredientId) ?? { tags: [], matchedTerms: new Set<string>() };
+        match.tags.push(tag);
+        for (const term of terms) match.matchedTerms.add(term);
+        matchingTags.set(tag.ingredientId, match);
       }
     }
     function findMatches(ingredients: Ingredient[], getPath: (ingredient: Ingredient) => string[] | null) {
       return ingredients.flatMap(ingredient => {
-        const tags = matchingTags.get(ingredient.id) ?? [];
-        const matches = isTagSearch ? tags.length > 0 : normalizeIngredientSearchText(ingredient.name).includes(searchText);
+        const tagMatch = matchingTags.get(ingredient.id);
+        const matches = isTagSearch ? tagMatch?.matchedTerms.size === searchTerms.length
+          : normalizeIngredientSearchText(ingredient.name).includes(searchTerms[0]);
         if (!matches) return [];
         const path = getPath(ingredient);
-        return path ? [{ ingredient, path, tags }] : [];
+        return path ? [{ ingredient, path, tags: tagMatch?.tags ?? [] }] : [];
       });
     }
     return [
       ...findMatches(data.ingredients, ingredient => getIngredientLocationPath(layout, ingredient, t)),
       ...findMatches(data.unassigned, () => [t('unassigned.label')]),
     ].sort((a, b) => a.ingredient.name.localeCompare(b.ingredient.name));
-  }, [data, isTagSearch, searchText, t]);
+  }, [data, isTagSearch, searchTerms, t]);
 
   function changeQuery(value: string) {
-    const nextQuery = value.startsWith(TAG_SEARCH_PREFIX)
-      ? TAG_SEARCH_MARKER + value.slice(TAG_SEARCH_PREFIX.length) : value;
-    const nextIsTagSearch = nextQuery.startsWith(TAG_SEARCH_MARKER);
-    const nextText = nextIsTagSearch ? nextQuery.slice(TAG_SEARCH_MARKER.length) : nextQuery;
-    setQuery(nextQuery);
-    if (nextIsTagSearch !== isTagSearch || !nextText.trim()) setAppliedSearch(null);
+    if (!value && isTagSearch && completedTagTerms.length) {
+      // 빈 태그 조건을 지우면 직전 조건으로 돌아가 다시 편집할 수 있게 한다.
+      setQuery(TAG_SEARCH_MARKER + completedTagTerms[completedTagTerms.length - 1]);
+      setCompletedTagTerms(completedTagTerms.slice(0, -1));
+      return;
+    }
+    const prefix = value.startsWith(TAG_SEARCH_MARKER) ? TAG_SEARCH_MARKER : TAG_SEARCH_PREFIX;
+    if (value.startsWith(prefix)) {
+      const segments = value.slice(prefix.length).split(TAG_SEARCH_PREFIX);
+      const nextText = segments.pop() ?? '';
+      const newTerms = segments.map(term => term.trim()).filter(Boolean);
+      if (newTerms.length) setCompletedTagTerms([...completedTagTerms, ...newTerms]);
+      setQuery(TAG_SEARCH_MARKER + nextText);
+      if (!isTagSearch || (!nextText.trim() && !completedTagTerms.length && !newTerms.length)) setAppliedSearch(null);
+      return;
+    }
+    if (completedTagTerms.length) setCompletedTagTerms([]);
+    setQuery(value);
+    if (isTagSearch || !value.trim()) setAppliedSearch(null);
   }
 
   function closeSearch(ingredientId?: string) {
@@ -170,16 +192,26 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
           </FeedbackPressable>
           <View style={styles.searchBar}>
             <MaterialDesignIcons name="magnify" size={22} color={colors.textMuted} accessible={false} />
-            {isTagSearch ? <MaterialDesignIcons name="pound" size={18} color={colors.chilled} accessible={false} /> : null}
-            <View style={[styles.inputContainer, isTagSearch && styles.tagInput]}>
-              {isTagSearch && !queryText ? <Text pointerEvents="none" accessible={false} style={styles.tagPlaceholder}>{searchLabel}</Text> : null}
-              <TextInput ref={input} value={query} onChangeText={changeQuery} style={[styles.input, isTagSearch && styles.tagInputText]}
-                autoFocus={Platform.OS !== 'ios'} accessibilityLabel={searchLabel}
-                placeholder={searchLabel} placeholderTextColor={colors.textMuted}
-                keyboardAppearance={mode} autoCorrect={false} returnKeyType="done" />
+            <View style={styles.searchFields}>
+              {completedTagTerms.map((term, index) => (
+                <View key={index} style={styles.searchTag}>
+                  <MaterialDesignIcons name="pound" size={18} color={colors.chilled} accessible={false} />
+                  <Text style={styles.searchTagText} numberOfLines={1}>{term}</Text>
+                </View>
+              ))}
+              <View style={styles.activeSearchField}>
+                {isTagSearch ? <MaterialDesignIcons name="pound" size={18} color={colors.chilled} accessible={false} /> : null}
+                <View style={[styles.inputContainer, isTagSearch && styles.tagInput]}>
+                  {isTagSearch && !queryText ? <Text pointerEvents="none" accessible={false} style={styles.tagPlaceholder}>{searchLabel}</Text> : null}
+                  <TextInput ref={input} value={query} onChangeText={changeQuery} style={[styles.input, isTagSearch && styles.tagInputText]}
+                    autoFocus={Platform.OS !== 'ios'} accessibilityLabel={searchLabel}
+                    placeholder={searchLabel} placeholderTextColor={colors.textMuted}
+                    keyboardAppearance={mode} autoCorrect={false} returnKeyType="done" />
+                </View>
+              </View>
             </View>
             {query ? <FeedbackPressable iconFeedback accessibilityRole="button"
-              accessibilityLabel={t(isTagSearch && !queryText ? 'search.exitTagMode' : 'search.clear')}
+              accessibilityLabel={t(isTagSearch && !queryText && !completedTagTerms.length ? 'search.exitTagMode' : 'search.clear')}
               onPress={() => { changeQuery(isTagSearch && queryText ? TAG_SEARCH_MARKER : ''); input.current?.focus(); }}
               style={styles.clearButton}>
               <MaterialDesignIcons name="close-circle-outline" size={22} color={colors.textMuted} accessible={false} />
@@ -206,13 +238,13 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
                     <View style={styles.result} accessible accessibilityLabel={[ingredient.name, ingredient.quantity, ...tags.map(tag => tag.name)].join(', ')}>
                       <View style={styles.resultDetails}>
                         <View style={styles.resultText}>
-                          {isTagSearch ? <Text style={styles.name}>{ingredient.name}</Text> : highlightName(ingredient.name, searchText, styles)}
+                          {isTagSearch ? <Text style={styles.name}>{ingredient.name}</Text> : highlightName(ingredient.name, searchTerms, styles)}
                           <Text style={styles.quantity}>{ingredient.quantity}</Text>
                         </View>
                         {tags.length > 0 ? <View style={styles.matchTags}>
                           {tags.map(tag => <View key={tag.id} style={styles.matchTag}>
                             <MaterialDesignIcons name="pound" size={14} color={colors.textMuted} accessible={false} />
-                            {highlightName(tag.name, searchText, styles, true)}
+                            {highlightName(tag.name, searchTerms, styles, true)}
                           </View>)}
                         </View> : null}
                       </View>
@@ -221,7 +253,7 @@ export function IngredientSearchScreen({ navigation, onSelectIngredient }: Ingre
                   </FeedbackPressable>
                 );
               }} />
-          </> : searchText && !isPending ? (
+          </> : searchTerms.length > 0 && !isPending ? (
             <Text style={styles.empty} accessibilityLiveRegion="polite">{t('search.noResults')}</Text>
           ) : null}
       </KeyboardAvoidingView>
@@ -259,6 +291,10 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   tagHighlightLine: { bottom: -1 },
   searchBar: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingLeft: spacing.sm,
     backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
+  searchFields: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: spacing.sm },
+  searchTag: { flexDirection: 'row', alignItems: 'center', gap: 2, maxWidth: '100%', paddingVertical: spacing.xs },
+  searchTagText: { flexShrink: 1, fontSize: 16, color: colors.chilled },
+  activeSearchField: { flexGrow: 1, flexBasis: 100, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   inputContainer: { flex: 1, minWidth: 0, justifyContent: 'center' },
   input: { minHeight: 46, color: colors.text, fontSize: 16, paddingRight: spacing.sm, paddingVertical: spacing.xs },
   tagInput: { marginLeft: -spacing.sm + 2 },
