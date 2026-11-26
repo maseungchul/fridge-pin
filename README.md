@@ -43,6 +43,8 @@ npm install
 npm start
 ```
 
+Node.js 24에서 `npm test`로 SQLite, 모델, 주요 화면 흐름을 검증합니다.
+
 <!-- ## 관련 문서
 
 - [요구사항](docs/requirements.md)

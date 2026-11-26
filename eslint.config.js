@@ -6,5 +6,9 @@ module.exports = defineConfig([
   expoConfig,
   {
     ignores: ["dist/*"],
-  }
+  },
+  {
+    files: ['scripts/**/*.cjs'],
+    languageOptions: { globals: { __dirname: 'readonly' } },
+  },
 ]);
