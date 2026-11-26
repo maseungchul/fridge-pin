@@ -2,10 +2,10 @@
  * @file
  * 홈과 열린 도면의 재료 배지·냉장·냉동 아이콘을 화면 중앙의 범례 팝업으로 설명한다.
  * 냉장·냉동을 먼저 표시하고, 제목 아래의 제한된 영역에서 설명을 스크롤한다.
- * 표시 상태는 홈에서 관리하며, 팝업 바깥 터치·뒤로가기·접근성 닫기를 함께 처리한다.
+ * 표시 상태는 홈에서 관리하며, 닫기 동작은 공통 팝업에 연결한다.
  */
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { CenteredPopup } from '@/components/CenteredPickerPopup';
 import { INGREDIENT_BADGE_SIZE, IngredientCountBadge } from '@/features/ingredient/components/IngredientCountBadges';
 import { DoorModeArt } from '@/features/fridge/components/FridgeMap';
 import { spacing, createThemedStyles } from '@/theme/tokens';
@@ -26,46 +26,35 @@ export function FridgeIngredientLegend({ onClose }: { onClose: () => void }) {
   const { mode } = useAppTheme();
   const styles = getStyles(mode);
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   return (
-    <Modal transparent visible animationType="fade" presentationStyle="overFullScreen"
-      statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
-      <View style={[styles.overlay, { paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.lg,
-        paddingLeft: insets.left + spacing.lg, paddingRight: insets.right + spacing.lg }]}
-        accessibilityViewIsModal onAccessibilityEscape={onClose}>
-        <Pressable style={StyleSheet.absoluteFill} accessibilityRole="button" accessibilityLabel={t('legend.close')} onPress={onClose} />
-        {/* 바깥 닫기는 뒤쪽 형제 레이어에 맡기고, 팝업은 목록의 스크롤 제스처를 가로채지 않는다. */}
-        <View style={styles.popup}>
-          <View style={styles.header}>
-            <Text accessibilityRole="header" style={styles.title}>{t('legend.title')}</Text>
-          </View>
-          {/* 밝은 팝업에서 표시줄이 보이도록 검은색을 지정하고, 자체 여백으로 둥근 모서리에서 떨어뜨린다. */}
-          <ScrollView style={styles.scroll} contentContainerStyle={styles.content} bounces={false} showsVerticalScrollIndicator
-            indicatorStyle={mode === 'dark' ? 'white' : 'black'} automaticallyAdjustsScrollIndicatorInsets={false}
-            scrollIndicatorInsets={{ top: 0, bottom: spacing.md, left: 0, right: spacing.xs }}>
-            {legendItems.map(item => (
-              <View key={item.title} style={styles.item} accessible
-                accessibilityLabel={'description' in item ? `${t(item.title)}, ${t(item.description)}` : t(item.title)}>
-                <View style={styles.itemHeader}>
-                  <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-                    {'kind' in item ? <IngredientCountBadge kind={item.kind} />
-                      : <DoorModeArt storageMode={item.storageMode} size={22} style={styles.modeIcon} />}
-                  </View>
-                  <Text style={styles.itemTitle}>{t(item.title)}</Text>
-                </View>
-                {'description' in item ? <Text style={styles.itemDescription}>{t(item.description)}</Text> : null}
-              </View>
-            ))}
-          </ScrollView>
-        </View>
+    <CenteredPopup dismissLabel={t('legend.close')} onDismiss={onClose} outerPadding={spacing.lg} popupStyle={styles.popup}>
+      <View style={styles.header}>
+        <Text accessibilityRole="header" style={styles.title}>{t('legend.title')}</Text>
       </View>
-    </Modal>
+      {/* 밝은 팝업에서 표시줄이 보이도록 검은색을 지정하고, 자체 여백으로 둥근 모서리에서 떨어뜨린다. */}
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} bounces={false} showsVerticalScrollIndicator
+        indicatorStyle={mode === 'dark' ? 'white' : 'black'} automaticallyAdjustsScrollIndicatorInsets={false}
+        scrollIndicatorInsets={{ top: 0, bottom: spacing.md, left: 0, right: spacing.xs }}>
+        {legendItems.map(item => (
+          <View key={item.title} style={styles.item} accessible
+            accessibilityLabel={'description' in item ? `${t(item.title)}, ${t(item.description)}` : t(item.title)}>
+            <View style={styles.itemHeader}>
+              <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                {'kind' in item ? <IngredientCountBadge kind={item.kind} />
+                  : <DoorModeArt storageMode={item.storageMode} size={22} style={styles.modeIcon} />}
+              </View>
+              <Text style={styles.itemTitle}>{t(item.title)}</Text>
+            </View>
+            {'description' in item ? <Text style={styles.itemDescription}>{t(item.description)}</Text> : null}
+          </View>
+        ))}
+      </ScrollView>
+    </CenteredPopup>
   );
 }
 
 const getStyles = createThemedStyles(({ colors }) => StyleSheet.create({
-  overlay: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' },
-  popup: { width: '100%', maxWidth: 360, height: 340, maxHeight: '100%', borderRadius: 16, backgroundColor: colors.surface, overflow: 'hidden' },
+  popup: { height: 340 },
   header: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs * 3 },
   scroll: { flex: 1, minHeight: 0 },
   content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg, gap: spacing.lg },
