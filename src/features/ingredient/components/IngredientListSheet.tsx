@@ -12,6 +12,7 @@ import type { BottomSheetRef } from '@/features/ingredient/components/BottomShee
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { useSQLiteContext } from 'expo-sqlite';
 import { FeedbackPressable } from '@/components/FeedbackPressable';
+import { SelectionToolbar, SelectionToolbarButton } from '@/components/SelectionToolbar';
 import { EmptyListState } from '@/components/EmptyListState';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useToast } from '@/components/ToastProvider';
@@ -503,36 +504,14 @@ export function IngredientListSheet({ position, storageMode, layout, allIngredie
                         )}
                       </View>
                       {!secondary && isSelecting ? (
-                        <View style={[styles.selectionToolbar, { height: 50 + insets.bottom, paddingBottom: insets.bottom,
-                          paddingLeft: spacing.sm + insets.left, paddingRight: spacing.sm + insets.right }]}>
-                          <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('ingredient.enqueueSelected')}
-                            disabled={selectedIngredients.length === 0 || isBusy} interactionBlocked={isChanging}
-                            accessibilityState={{ disabled: selectedIngredients.length === 0 || isBusy || isChanging }}
-                            feedback="none" onPress={enqueueSelectedIngredients} style={styles.selectionAction}>
-                            {({ pressed }) => <>
-                              <MaterialDesignIcons name="swap-horizontal" size={24} color={pressed ? colors.iconPressed : colors.text} accessible={false} pointerEvents="none" />
-                              <Text style={[styles.selectionActionLabel, pressed && styles.selectionActionPressed]}>{t('ingredient.enqueueLabel')}</Text>
-                            </>}
-                          </FeedbackPressable>
-                          <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('ingredient.consumeSelected')}
-                            disabled={selectedIngredients.length === 0 || isBusy} interactionBlocked={isChanging}
-                            accessibilityState={{ disabled: selectedIngredients.length === 0 || isBusy || isChanging }}
-                            feedback="none" onPress={() => requestRemoval('consume')} style={styles.selectionAction}>
-                            {({ pressed }) => <>
-                              <MaterialDesignIcons name="sticker-check-outline" size={24} color={pressed ? colors.iconPressed : colors.text} accessible={false} pointerEvents="none" />
-                              <Text style={[styles.selectionActionLabel, pressed && styles.selectionActionPressed]}>{t('ingredient.consume')}</Text>
-                            </>}
-                          </FeedbackPressable>
-                          <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('ingredient.deleteSelected')}
-                            disabled={selectedIngredients.length === 0 || isBusy} interactionBlocked={isChanging}
-                            accessibilityState={{ disabled: selectedIngredients.length === 0 || isBusy || isChanging }}
-                            feedback="none" onPress={() => requestRemoval('delete')} style={styles.selectionAction}>
-                            {({ pressed }) => <>
-                              <MaterialDesignIcons name="trash-can-outline" size={24} color={pressed ? colors.errorPressed : colors.error} accessible={false} pointerEvents="none" />
-                              <Text style={[styles.selectionActionLabel, styles.deleteLabel, pressed && styles.deleteLabelPressed]}>{t('common.delete')}</Text>
-                            </>}
-                          </FeedbackPressable>
-                        </View>
+                        <SelectionToolbar>
+                          <SelectionToolbarButton icon="swap-horizontal" label={t('ingredient.enqueueLabel')} accessibilityLabel={t('ingredient.enqueueSelected')}
+                            disabled={selectedIngredients.length === 0 || isBusy} interactionBlocked={isChanging} onPress={enqueueSelectedIngredients} />
+                          <SelectionToolbarButton icon="sticker-check-outline" label={t('ingredient.consume')} accessibilityLabel={t('ingredient.consumeSelected')}
+                            disabled={selectedIngredients.length === 0 || isBusy} interactionBlocked={isChanging} onPress={() => requestRemoval('consume')} />
+                          <SelectionToolbarButton icon="trash-can-outline" label={t('common.delete')} accessibilityLabel={t('ingredient.deleteSelected')}
+                            disabled={selectedIngredients.length === 0 || isBusy} interactionBlocked={isChanging} destructive onPress={() => requestRemoval('delete')} />
+                        </SelectionToolbar>
                       ) : null}
                     </>
                   ) : null}
@@ -566,13 +545,6 @@ const getStyles = createThemedStyles(({ colors, ingredientBadgeColors }, mode) =
   purchasedHeaderSpacer: { width: HEADER_CONTENT_HEIGHT },
   selectionCircleContainer: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
   selectionCircle: { width: 20, height: 20, borderRadius: 10, borderWidth: 1, borderColor: colors.textMuted },
-  selectionToolbar: { flexDirection: 'row', flexShrink: 0,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, backgroundColor: colors.surface },
-  selectionAction: { flex: 1, minHeight: 48, marginHorizontal: spacing.xs, paddingTop: spacing.xs, alignItems: 'center', justifyContent: 'center' },
-  selectionActionLabel: { color: colors.text, fontSize: 12, lineHeight: 16, textAlign: 'center', fontWeight: '600' },
-  selectionActionPressed: { color: colors.iconPressed },
-  deleteLabel: { color: colors.error },
-  deleteLabelPressed: { color: colors.errorPressed },
   selectableItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   selectedItem: { backgroundColor: colors.chilledBackground },
   itemDetails: { flex: 1, gap: spacing.xs },

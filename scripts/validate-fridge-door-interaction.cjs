@@ -177,6 +177,7 @@ const native = {
 let mapModule;
 let badgeModule;
 let legendModule;
+let selectionToolbarModule;
 let interiorModule;
 let structureModule;
 let menuModule;
@@ -235,6 +236,7 @@ function loadComponent(path, overrides = {}) {
     '@/features/ingredient/components/ReminderLeadTimePicker': { ReminderLeadTimePicker: 'ReminderLeadTimePicker' },
     '@/components/TimePicker': { TimePicker: 'TimePicker' },
     '@/components/FeedbackPressable': { FeedbackPressable: 'FeedbackPressable' },
+    '@/components/SelectionToolbar': selectionToolbarModule,
     '@/components/QuantityStepper': quantityStepperModule,
     '@/constants/alertTitles': { alertTitles: alertTitleKeys },
     '@/features/fridge/constants/messages': { fridgeMessages: fridgeMessageKeys },
@@ -320,6 +322,7 @@ function loadComponent(path, overrides = {}) {
   return module.exports;
 }
 const chipTabsModule = loadComponent('src/components/IconChipTabs.tsx');
+selectionToolbarModule = loadComponent('src/components/SelectionToolbar.tsx');
 languageModule = loadComponent('src/i18n/LanguageProvider.tsx');
 shoppingRepository = loadComponent('src/db/shoppingRepository.ts', { expo: { uuid: {} } });
 delayedLoadingModule = loadComponent('src/hooks/useDelayedLoading.ts');
@@ -540,6 +543,7 @@ test('더보기 냉장고 삭제는 재료 일괄 삭제를 고지하고 확인�
 const children = node => node?.type === quantityStepperModule.QuantityStepper || node?.type?.name === 'FloatingIconButton'
   || node?.type === badgeModule.IngredientCountBadges || node?.type === badgeModule.IngredientCountBadge
   || node?.type === centeredPickerPopupModule.CenteredPickerPopup
+  || node?.type === selectionToolbarModule.SelectionToolbar || node?.type === selectionToolbarModule.SelectionToolbarButton
   ? [node.type(node.props)].filter(Boolean)
   : [node?.props?.children, node?.type === 'BottomSheet' ? node.props.header : null].flat(Infinity).filter(child => child?.type);
 const flattenStyle = style => Object.assign({}, ...[style].flat(Infinity).filter(Boolean));

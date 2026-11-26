@@ -9,6 +9,7 @@ import { BottomSheetSectionList } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { FeedbackPressable } from '@/components/FeedbackPressable';
+import { SelectionToolbar, SelectionToolbarButton } from '@/components/SelectionToolbar';
 import { EmptyListState } from '@/components/EmptyListState';
 import { getIngredientLocationPath } from '@/features/fridge/model/fridgeLayout';
 import type { FridgeLayout } from '@/features/fridge/model/fridgeLayout';
@@ -163,27 +164,17 @@ export function IngredientMoveQueueList({ ingredients, layout, disabled, selecti
           ) : <View style={styles.item}>{details}</View>;
         }} />
       {selectedIds ? (
-        <View style={[styles.selectionToolbar, { height: 50 + insets.bottom, paddingBottom: insets.bottom }]}>
+        <SelectionToolbar compact>
           {onAssign ? (
-            <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('unassigned.choose')} feedback="none"
-              disabled={disabled || targets.length === 0} onPress={() => {
+            <SelectionToolbarButton icon="map-marker-outline" label={t('unassigned.choose')} disabled={disabled || targets.length === 0}
+              onPress={() => {
                 if (!removalPending.current) onAssign(targets.map(item => item.id));
-              }} style={styles.selectionAction}>
-              {({ pressed }) => <>
-                <MaterialDesignIcons name="map-marker-outline" size={24} color={pressed ? colors.iconPressed : colors.text} accessible={false} />
-                <Text style={[styles.assignLabel, pressed && { color: colors.iconPressed }]}>{t('unassigned.choose')}</Text>
-              </>}
-            </FeedbackPressable>
+              }} />
           ) : null}
-          <FeedbackPressable accessibilityRole="button" accessibilityLabel={t(onAssign ? 'ingredient.deleteSelected' : 'queue.deleteSelected')} feedback="none"
-            disabled={disabled || targets.length === 0} accessibilityState={{ disabled: disabled || targets.length === 0 }}
-            onPress={requestRemoval} style={styles.selectionAction}>
-            {({ pressed }) => <>
-              <MaterialDesignIcons name="trash-can-outline" size={24} color={pressed ? colors.errorPressed : colors.error} accessible={false} />
-              <Text style={[styles.deleteLabel, pressed && { color: colors.errorPressed }]}>{t('common.delete')}</Text>
-            </>}
-          </FeedbackPressable>
-        </View>
+          <SelectionToolbarButton icon="trash-can-outline" label={t('common.delete')}
+            accessibilityLabel={t(onAssign ? 'ingredient.deleteSelected' : 'queue.deleteSelected')}
+            disabled={disabled || targets.length === 0} destructive onPress={requestRemoval} />
+        </SelectionToolbar>
       ) : null}
     </>
   );
@@ -206,9 +197,5 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   selectedItem: { backgroundColor: colors.chilledBackground },
   selectionCircleContainer: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
   selectionCircle: { width: 20, height: 20, borderRadius: 10, borderWidth: 1, borderColor: colors.textMuted },
-  selectionToolbar: { flexShrink: 0, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, backgroundColor: colors.surface },
-  selectionAction: { flex: 1, minHeight: 48, paddingTop: spacing.xs, alignItems: 'center', justifyContent: 'center' },
-  deleteLabel: { color: colors.error, fontSize: 12, lineHeight: 16, fontWeight: '600' },
-  assignLabel: { color: colors.text, fontSize: 12, lineHeight: 16, fontWeight: '600' },
   empty: { flexGrow: 1, justifyContent: 'center' },
 }));

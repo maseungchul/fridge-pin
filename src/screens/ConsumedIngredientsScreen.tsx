@@ -12,6 +12,7 @@ import { BottomSheet, type BottomSheetRef } from '@/features/ingredient/componen
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { useSQLiteContext } from 'expo-sqlite';
 import { FeedbackPressable } from '@/components/FeedbackPressable';
+import { SelectionToolbar, SelectionToolbarButton } from '@/components/SelectionToolbar';
 import { EmptyListState } from '@/components/EmptyListState';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useToast } from '@/components/ToastProvider';
@@ -222,25 +223,11 @@ export function ConsumedIngredientsScreen({ onClose, onRecordsLoaded, onPickRest
             }} />
         )}
       {isSelecting ? (
-        <View style={[styles.selectionToolbar, { height: 50 + insets.bottom, paddingBottom: insets.bottom,
-          paddingLeft: spacing.sm + insets.left, paddingRight: spacing.sm + insets.right }]}>
-          <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('consumed.restore')}
-            disabled={actionsDisabled} accessibilityState={{ disabled: actionsDisabled }}
-            feedback="none" onPress={restore} style={styles.selectionAction}>
-            {({ pressed }) => <>
-              <MaterialDesignIcons name="restore" size={24} color={pressed ? colors.iconPressed : colors.text} accessible={false} />
-              <Text style={[styles.restoreLabel, pressed && { color: colors.iconPressed }]}>{t('consumed.restore')}</Text>
-            </>}
-          </FeedbackPressable>
-          <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('consumed.delete')}
-            disabled={actionsDisabled} accessibilityState={{ disabled: actionsDisabled }}
-            feedback="none" onPress={requestDelete} style={styles.selectionAction}>
-            {({ pressed }) => <>
-              <MaterialDesignIcons name="trash-can-outline" size={24} color={pressed ? colors.errorPressed : colors.error} accessible={false} />
-              <Text style={[styles.deleteLabel, pressed && { color: colors.errorPressed }]}>{t('consumed.delete')}</Text>
-            </>}
-          </FeedbackPressable>
-        </View>
+        <SelectionToolbar>
+          <SelectionToolbarButton icon="restore" label={t('consumed.restore')} disabled={actionsDisabled} onPress={restore} />
+          <SelectionToolbarButton icon="trash-can-outline" label={t('consumed.delete')} disabled={actionsDisabled}
+            destructive onPress={requestDelete} />
+        </SelectionToolbar>
       ) : null}
       </View>
     </BottomSheet>
@@ -256,10 +243,6 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   selectionHeaderLeft: { width: HEADER_CONTENT_HEIGHT, marginLeft: -COMPACT_HEADER_ICON_INSET },
   selectionHeaderRight: { width: HEADER_CONTENT_HEIGHT, marginRight: -COMPACT_HEADER_ICON_INSET },
   headerButton: { width: HEADER_CONTENT_HEIGHT, height: HEADER_CONTENT_HEIGHT, alignItems: 'center', justifyContent: 'center', borderRadius: 24 },
-  selectionToolbar: { flexDirection: 'row', flexShrink: 0, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, backgroundColor: colors.surface },
-  selectionAction: { flex: 1, minHeight: 48, marginHorizontal: spacing.xs, paddingTop: spacing.xs, alignItems: 'center', justifyContent: 'center' },
-  restoreLabel: { color: colors.text, fontSize: 12, lineHeight: 16, fontWeight: '600' },
-  deleteLabel: { color: colors.error, fontSize: 12, lineHeight: 16, fontWeight: '600' },
   list: { flex: 1 },
   empty: { flexGrow: 1, justifyContent: 'center' },
   feedback: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, gap: spacing.md },

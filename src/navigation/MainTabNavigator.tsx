@@ -9,11 +9,10 @@ import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
-import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { FeedbackPressable } from '@/components/FeedbackPressable';
+import { SelectionToolbar, SelectionToolbarButton } from '@/components/SelectionToolbar';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { ShoppingScreen, type ShoppingSelectionActions } from '@/screens/ShoppingScreen';
 import { MoreStackNavigator } from '@/navigation/MoreStackNavigator';
@@ -112,34 +111,19 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
 
   return (
     <Tab.Navigator initialRouteName="Home" tabBar={props => shoppingAction ? (
-      <View style={[styles.selectionToolbar, { height: 50 + insets.bottom, paddingBottom: insets.bottom,
-        paddingLeft: spacing.sm + insets.left, paddingRight: spacing.sm + insets.right }]}>
-        <FeedbackPressable accessibilityRole="button" accessibilityLabel={t(shoppingAction.isUndo ? 'shopping.undoPurchase' : 'shopping.purchasedTab')}
-          disabled={shoppingAction.disabled} accessibilityState={{ disabled: shoppingAction.disabled }}
-          feedback="none" onPress={shoppingAction.onPurchase} style={styles.selectionAction}>
-          {({ pressed }) => <><MaterialDesignIcons name={shoppingAction.isUndo ? 'undo-variant' : 'check-circle-outline'} size={24}
-            color={pressed ? colors.iconPressed : colors.text} accessible={false} pointerEvents="none" />
-            <Text style={[styles.purchaseLabel, pressed && { color: colors.iconPressed }]}>{t(shoppingAction.isUndo ? 'shopping.undoPurchase' : 'shopping.purchasedTab')}</Text></>}
-        </FeedbackPressable>
+      <SelectionToolbar background="background">
+        <SelectionToolbarButton icon={shoppingAction.isUndo ? 'undo-variant' : 'check-circle-outline'}
+          label={t(shoppingAction.isUndo ? 'shopping.undoPurchase' : 'shopping.purchasedTab')}
+          disabled={shoppingAction.disabled} onPress={shoppingAction.onPurchase} />
         {shoppingAction.onRegister ? (
-          <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('shopping.registerAsIngredient')}
-            disabled={shoppingAction.disabled} accessibilityState={{ disabled: shoppingAction.disabled }}
-            feedback="none" onPress={shoppingAction.onRegister} style={styles.selectionAction}>
-            {({ pressed }) => <>
-              <MaterialDesignIcons name="checkbox-marked-circle-plus-outline" size={24}
-                color={pressed ? colors.iconPressed : colors.text} accessible={false} pointerEvents="none" />
-              <Text style={[styles.purchaseLabel, pressed && { color: colors.iconPressed }]}>{t('shopping.registerAsIngredient')}</Text>
-            </>}
-          </FeedbackPressable>
+          <SelectionToolbarButton icon="checkbox-marked-circle-plus-outline" label={t('shopping.registerAsIngredient')}
+            disabled={shoppingAction.disabled} onPress={shoppingAction.onRegister} />
         ) : null}
-        {shoppingAction.onDelete ? <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('shopping.deleteSelected')}
-          disabled={shoppingAction.disabled} accessibilityState={{ disabled: shoppingAction.disabled }}
-          feedback="none" onPress={shoppingAction.onDelete} style={styles.selectionAction}>
-          {({ pressed }) => <><MaterialDesignIcons name="trash-can-outline" size={24}
-            color={pressed ? colors.errorPressed : colors.error} accessible={false} pointerEvents="none" />
-            <Text style={[styles.deleteLabel, pressed && { color: colors.errorPressed }]}>{t('common.delete')}</Text></>}
-        </FeedbackPressable> : null}
-      </View>
+        {shoppingAction.onDelete ? (
+          <SelectionToolbarButton icon="trash-can-outline" label={t('common.delete')} accessibilityLabel={t('shopping.deleteSelected')}
+            disabled={shoppingAction.disabled} destructive onPress={shoppingAction.onDelete} />
+        ) : null}
+      </SelectionToolbar>
     ) : <BottomTabBar {...props} />} screenListeners={{
       tabPress: () => setIsDeleteTransition(false),
     }} screenOptions={({ route }) => ({
@@ -235,10 +219,6 @@ const getStyles = createThemedStyles(({ colors }) => StyleSheet.create({
     borderTopColor: colors.border, borderTopWidth: StyleSheet.hairlineWidth,
     elevation: 0, shadowOpacity: 0,
   },
-  selectionToolbar: { flexDirection: 'row', flexShrink: 0, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, backgroundColor: colors.background },
-  selectionAction: { flex: 1, minHeight: 48, marginHorizontal: spacing.xs, paddingTop: spacing.xs, alignItems: 'center', justifyContent: 'center' },
-  purchaseLabel: { color: colors.text, fontSize: 12, lineHeight: 16, textAlign: 'center', fontWeight: '600' },
-  deleteLabel: { color: colors.error, fontSize: 12, lineHeight: 16, textAlign: 'center', fontWeight: '600' },
   item: { marginHorizontal: spacing.xs },
   button: { minHeight: 44, borderRadius: 18, paddingTop: 8, paddingBottom: 0, justifyContent: 'center' },
   // 선택 배경 전체를 아이콘 슬롯에 넣어 아래 라벨과 겹치지 않게 한다.
