@@ -7,7 +7,7 @@ import { useCallback, useRef } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MainTabNavigator } from '@/navigation/MainTabNavigator';
 import { RefrigeratorRegistrationScreen } from '@/screens/RefrigeratorRegistrationScreen';
-import { IngredientFormScreen, type IngredientFormResult } from '@/screens/IngredientFormScreen';
+import { IngredientFormScreen } from '@/screens/IngredientFormScreen';
 import { IngredientPositionScreen } from '@/screens/IngredientPositionScreen';
 import { IngredientSearchScreen } from '@/screens/IngredientSearchScreen';
 import { ShoppingFormScreen } from '@/screens/ShoppingFormScreen';
@@ -36,9 +36,9 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 /** 화면을 Navigator에 등록하고 공통 전환 효과와 헤더 표시를 설정한다. */
 export function RootNavigator() {
   const { colors } = useAppTheme();
-  // 화면을 닫기 전에 전달한 초안·저장 결과를 홈 복귀 시 한 번만 가져간다.
-  const ingredientFormResult = useRef<IngredientFormResult | null>(null);
-  const updateIngredientFormResult = useCallback((result: IngredientFormResult) => {
+  // 화면을 닫기 전에 전달한 저장 결과를 홈 복귀 시 한 번만 가져간다.
+  const ingredientFormResult = useRef<Ingredient | null>(null);
+  const updateIngredientFormResult = useCallback((result: Ingredient) => {
     ingredientFormResult.current = result;
   }, []);
   const takeIngredientFormResult = useCallback(() => {
@@ -76,7 +76,7 @@ export function RootNavigator() {
         presentation: 'transparentModal', animation: 'none', gestureEnabled: false,
         contentStyle: { backgroundColor: 'transparent' },
       }}>
-        {props => <IngredientFormScreen {...props} onResultChange={updateIngredientFormResult} />}
+        {props => <IngredientFormScreen {...props} onSaved={updateIngredientFormResult} />}
       </Stack.Screen>
       <Stack.Screen name="IngredientSearch" options={{ animation: 'none' }}>
         {props => <IngredientSearchScreen {...props} onSelectIngredient={id => { ingredientSearchResult.current = id; navigateHome.current?.(); }} />}

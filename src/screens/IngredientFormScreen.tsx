@@ -21,7 +21,7 @@ import { getIngredientTagOptions } from '@/db/ingredientTagRepository';
 import type { BottomSheetRef } from '@/features/ingredient/components/BottomSheet';
 import { IngredientExpirationCalendar } from '@/features/ingredient/components/IngredientExpirationCalendar';
 import { IngredientTagPickerSheet } from '@/features/ingredient/components/IngredientTagPickerSheet';
-import type { Ingredient, IngredientDraft, IngredientTag } from '@/features/ingredient/model/ingredient';
+import type { Ingredient, IngredientTag } from '@/features/ingredient/model/ingredient';
 import { INGREDIENT_MEMO_MAX_LENGTH, INGREDIENT_NAME_MAX_LENGTH, INGREDIENT_QUANTITY_MAX_LENGTH } from '@/features/ingredient/model/ingredient';
 import { useTranslation } from '@/i18n/LanguageProvider';
 import { getErrorMessage } from '@/i18n/errors';
@@ -30,12 +30,6 @@ import type { RootStackParamList } from '@/navigation/RootNavigator';
 import { HEADER_CONTENT_HEIGHT, COMPACT_HEADER_ICON_INSET, COMPACT_HEADER_ICON_SIZE, getCompactHeaderStyles } from '@/theme/headerStyles';
 import { TAG_ICON_GAP, spacing, createThemedStyles } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/ThemeProvider';
-
-export interface IngredientFormResult {
-  draft: IngredientDraft;
-  isEditing: boolean;
-  savedIngredient: Ingredient | null;
-}
 
 const RECENT_TAGS_KEY = 'ingredient.recentTagIds';
 
@@ -49,10 +43,10 @@ async function readRecentTagIds(): Promise<string[]> {
 }
 
 type IngredientFormScreenProps = NativeStackScreenProps<RootStackParamList, 'IngredientForm'> & {
-  onResultChange: (result: IngredientFormResult) => void;
+  onSaved: (ingredient: Ingredient) => void;
 };
 
-export function IngredientFormScreen({ navigation, route, onResultChange }: IngredientFormScreenProps) {
+export function IngredientFormScreen({ navigation, route, onSaved }: IngredientFormScreenProps) {
   const { mode, colors } = useAppTheme();
   const styles = getStyles(mode);
   const { t } = useTranslation();
@@ -78,7 +72,6 @@ export function IngredientFormScreen({ navigation, route, onResultChange }: Ingr
   const memoInput = useRef<ComponentRef<typeof FormTextInput>>(null);
   const saving = useRef(false);
   const leaving = useRef(false);
-  const savedIngredient = useRef<Ingredient | null>(null);
   const tagsChanged = tagIds.length !== initialTagIds.length || tagIds.some(id => !initialTagIds.includes(id));
   const hasChanges = !editingIngredient || draft.name.trim() !== editingIngredient.name
     || draft.quantity.trim() !== editingIngredient.quantity || (draft.memo?.trim() || null) !== (editingIngredient.memo || null)
@@ -106,10 +99,6 @@ export function IngredientFormScreen({ navigation, route, onResultChange }: Ingr
     }).catch(() => { if (active) setTagLoadError(true); });
     return () => { active = false; };
   }, [db, editingId, tagLoadAttempt]);
-
-  useEffect(() => {
-    onResultChange({ draft, isEditing, savedIngredient: savedIngredient.current });
-  }, [draft, isEditing, onResultChange]);
 
   usePreventRemove(isSaving || isTagPickerOpen, ({ data }) => {
     if (leaving.current) navigation.dispatch(data.action);
@@ -165,8 +154,7 @@ export function IngredientFormScreen({ navigation, route, onResultChange }: Ingr
       setIsSaving(false);
       return;
     }
-    savedIngredient.current = ingredient;
-    onResultChange({ draft, isEditing, savedIngredient: ingredient });
+    onSaved(ingredient);
     leaving.current = true;
     navigation.goBack();
     showToast(isEditing ? t('ingredient.updated') : t('ingredient.registered'));

@@ -33,7 +33,6 @@ import { IngredientListSheet } from '@/features/ingredient/components/Ingredient
 import { ConsumedIngredientsScreen } from '@/screens/ConsumedIngredientsScreen';
 import { IngredientMoveQueueSheet } from '@/features/ingredient/components/IngredientMoveQueueSheet';
 import type { Ingredient, IngredientDraft } from '@/features/ingredient/model/ingredient';
-import type { IngredientFormResult } from '@/screens/IngredientFormScreen';
 import { useIngredientMoveQueue } from '@/features/ingredient/IngredientMoveQueueProvider';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 import type { MainTabParamList } from '@/navigation/MainTabNavigator';
@@ -48,7 +47,7 @@ type HomeScreenProps = CompositeScreenProps<
 > & {
   onTabInteractionBlockedChange?: (blocked: boolean) => void;
   clearDeletedRefrigeratorRef?: RefObject<(() => void) | null>;
-  takeIngredientFormResult: () => IngredientFormResult | null;
+  takeIngredientFormResult: () => Ingredient | null;
   takeIngredientSearchResult?: () => string | null;
 };
 
@@ -201,12 +200,11 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
   useFocusEffect(useCallback(() => {
     if (ingredientFormPending.current) {
       ingredientFormPending.current = false;
-      const result = takeIngredientFormResult();
-      if (result) {
-        const savedIngredient = result.savedIngredient;
-        if (savedIngredient) setIngredients(current => current.some(item => item.id === savedIngredient.id)
+      const savedIngredient = takeIngredientFormResult();
+      if (savedIngredient) {
+        setIngredients(current => current.some(item => item.id === savedIngredient.id)
           ? current.map(item => item.id === savedIngredient.id ? savedIngredient : item) : [...current, savedIngredient]);
-        if (savedIngredient) setIngredientFormResultVersion(current => current + 1);
+        setIngredientFormResultVersion(current => current + 1);
       }
       setIsIngredientFormOpen(false);
     } else {

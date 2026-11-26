@@ -19,7 +19,7 @@ import { MoreStackNavigator } from '@/navigation/MoreStackNavigator';
 import { spacing, createThemedStyles } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { useTranslation } from '@/i18n/LanguageProvider';
-import type { IngredientFormResult } from '@/screens/IngredientFormScreen';
+import type { Ingredient } from '@/features/ingredient/model/ingredient';
 
 export type MainTabParamList = {
   Home: undefined;
@@ -72,7 +72,7 @@ function MainTabButton({ children, disabled, onTouchStart, onPressIn, onPressOut
 export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearchResult, openSearch, navigateHomeRef }: {
   openSearch: () => void;
   navigateHomeRef: React.RefObject<(() => void) | null>;
-  takeIngredientFormResult: () => IngredientFormResult | null;
+  takeIngredientFormResult: () => Ingredient | null;
   takeIngredientSearchResult: () => string | null;
 }) {
   const { mode, colors } = useAppTheme();
