@@ -4,13 +4,15 @@
  * 냉장고·재료·장보기 입력은 상위 Stack에서 열어 입력 중에는 탭을 표시하지 않는다.
  * 탭바에서 하단 안전 영역을 확보하고, 재료 패널·소비 기록 처리 중에는 탭 입력을 막는다.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomTabBar, createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
+import Animated, { ReduceMotion, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { FeedbackPressable } from '@/components/FeedbackPressable';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { ShoppingScreen, type ShoppingSelectionActions } from '@/screens/ShoppingScreen';
@@ -34,6 +36,38 @@ const tabIcons = {
   More: require('../../assets/tab-more.svg'),
 };
 
+/** 터치 영역을 유지하면서 탭의 아이콘과 라벨에 누름 효과를 표시한다. */
+function MainTabButton({ children, disabled, onTouchStart, onPressIn, onPressOut, ...props }: BottomTabBarButtonProps) {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: disabled ? 1 : scale.get() }],
+  }));
+
+  useEffect(() => {
+    if (disabled) scale.set(1);
+  }, [disabled, scale]);
+
+  return (
+    <Pressable {...props} disabled={disabled} android_ripple={undefined}
+      onTouchStart={event => {
+        if (!disabled) Haptics.selectionAsync().catch(() => {});
+        onTouchStart?.(event);
+      }}
+      onPressIn={event => {
+        scale.set(withTiming(0.9, { duration: 100, reduceMotion: ReduceMotion.System }));
+        onPressIn?.(event);
+      }}
+      onPressOut={event => {
+        scale.set(withTiming(1, { duration: 160, reduceMotion: ReduceMotion.System }));
+        onPressOut?.(event);
+      }}>
+      <Animated.View pointerEvents="none" style={[{ alignSelf: 'stretch', alignItems: 'center' }, animatedStyle]}>
+        {children}
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearchResult }: {
   takeIngredientFormResult: () => IngredientFormResult | null;
   takeIngredientSearchResult: () => string | null;
@@ -50,9 +84,19 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
   };
   const [isTabInteractionBlocked, setIsTabInteractionBlocked] = useState(false);
   const [shoppingAction, setShoppingAction] = useState<ShoppingSelectionActions | null>(null);
+  const [pressedTab, setPressedTab] = useState<keyof MainTabParamList | null>(null);
   const clearDeletedRefrigerator = useRef<(() => void) | null>(null);
   const [isDeleteTransition, setIsDeleteTransition] = useState(false);
   const navigateAfterDelete = useRef<(() => void) | null>(null);
+
+  const handleTabInteractionBlockedChange = useCallback((blocked: boolean) => {
+    if (blocked) setPressedTab(null);
+    setIsTabInteractionBlocked(blocked);
+  }, []);
+  const handleShoppingSelectionChange = useCallback((action: ShoppingSelectionActions | null) => {
+    if (action) setPressedTab(null);
+    setShoppingAction(action);
+  }, []);
 
   useEffect(() => {
     if (!isDeleteTransition || !navigateAfterDelete.current) return;
@@ -110,16 +154,18 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
       tabBarIcon: ({ focused, color, size }) => (
         <View style={[styles.icon, focused && styles.selectedIcon]} pointerEvents="none">
           <Image source={tabIcons[route.name]} style={[{ width: size, height: size }, route.name === 'Shopping' && styles.shoppingIcon]}
-            contentFit="contain" tintColor={color} accessible={false} />
+            contentFit="contain" tintColor={pressedTab === route.name ? colors.chilled : color} accessible={false} />
         </View>
       ),
       tabBarActiveTintColor: colors.chilled,
       tabBarInactiveTintColor: colors.textMuted,
       tabBarActiveBackgroundColor: 'transparent',
       tabBarLabelStyle: styles.label,
-      tabBarLabel: mode === 'light' ? ({ focused, color, children }) => (
+      tabBarLabel: mode === 'light' || pressedTab === route.name ? ({ focused, color, children }) => (
         <Text numberOfLines={1} allowFontScaling={allowTabLabelFontScaling}
-          style={[styles.label, styles.lightLabel, { color }, focused && styles.selectedLightLabel]}>
+          style={[styles.label, mode === 'light' && styles.lightLabel,
+            { color: pressedTab === route.name ? colors.chilled : color },
+            mode === 'light' && (focused || pressedTab === route.name) && styles.selectedLightLabel]}>
           {children}
         </Text>
       ) : undefined,
@@ -132,10 +178,14 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
         paddingRight: spacing.sm + insets.right,
       }],
       tabBarButton: props => (
-        <Pressable {...props} disabled={isTabInteractionBlocked} android_ripple={undefined}
+        <MainTabButton {...props} disabled={isTabInteractionBlocked}
           onPressIn={event => {
-            Haptics.selectionAsync().catch(() => {});
+            setPressedTab(route.name);
             props.onPressIn?.(event);
+          }}
+          onPressOut={event => {
+            setPressedTab(current => current === route.name ? null : current);
+            props.onPressOut?.(event);
           }}
           accessibilityState={{ ...props.accessibilityState, selected: props['aria-selected'], disabled: isTabInteractionBlocked }}
           accessibilityElementsHidden={isTabInteractionBlocked}
@@ -144,12 +194,12 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
       ),
     })}>
       <Tab.Screen name="Home">
-        {props => <HomeScreen {...props} onTabInteractionBlockedChange={setIsTabInteractionBlocked}
+        {props => <HomeScreen {...props} onTabInteractionBlockedChange={handleTabInteractionBlockedChange}
           clearDeletedRefrigeratorRef={clearDeletedRefrigerator}
           takeIngredientFormResult={takeIngredientFormResult} takeIngredientSearchResult={takeIngredientSearchResult} />}
       </Tab.Screen>
       <Tab.Screen name="Shopping">
-        {props => <ShoppingScreen {...props} onSelectionModeChange={setShoppingAction} />}
+        {props => <ShoppingScreen {...props} onSelectionModeChange={handleShoppingSelectionChange} />}
       </Tab.Screen>
       <Tab.Screen name="More">
         {() => <MoreStackNavigator onTabInteractionBlockedChange={setIsTabInteractionBlocked}
@@ -180,7 +230,7 @@ const getStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   icon: { width: 52, height: 36, alignItems: 'center', justifyContent: 'center' },
   shoppingIcon: { width: 38, height: 38, transform: [{ translateY: -1 }] },
   selectedIcon: { borderRadius: 18, backgroundColor: colors.chipSelected },
-  label: { fontSize: 12, lineHeight: 13, fontWeight: '600', marginTop: 1 },
-  lightLabel: { fontWeight: '500', textAlign: 'center' },
+  label: { fontSize: 12, lineHeight: 13, fontWeight: '600', marginTop: 1, textAlign: 'center' },
+  lightLabel: { fontWeight: '500' },
   selectedLightLabel: { fontWeight: '700' },
 }));
