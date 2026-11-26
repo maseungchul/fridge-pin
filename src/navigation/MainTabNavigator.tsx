@@ -39,7 +39,7 @@ const tabIcons = {
 };
 
 /** 터치 영역을 유지하면서 탭의 아이콘과 라벨에 누름 효과를 표시한다. */
-function MainTabButton({ children, disabled, onTouchStart, onPressIn, onPressOut, ...props }: BottomTabBarButtonProps) {
+function MainTabButton({ children, disabled, onTouchStart, onPressIn, onPressOut, onLongPress: _onLongPress, ...props }: BottomTabBarButtonProps) {
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: disabled ? 1 : scale.get() }],
