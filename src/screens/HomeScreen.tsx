@@ -112,7 +112,6 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
     toolbarScroll.current = node;
     if (!node) toolbarInitiallyScrolled.current = false;
   }, []);
-  const closedScrollY = useRef(0);
   const isFocusBlocked = useCallback(() => toolbarChanging.current, []);
   const isSheetOpen = isIngredientListOpen || openLocationList !== null || isConsumedOpen;
   const queuedIngredients = queuedIds.flatMap(id => ingredients.find(ingredient => ingredient.id === id) ?? []);
@@ -140,9 +139,9 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
   const markConsumedAsUnseen = useCallback(() => updateConsumedBadge(true), [updateConsumedBadge]);
   const markConsumedAsSeen = useCallback(() => updateConsumedBadge(false), [updateConsumedBadge]);
   const {
-    selectedAreaId, setSelectedAreaId, setFocusTarget, focusPhase, focusBounds, focusViewport, activeFocus,
+    selectedAreaId, setSelectedAreaId, focusPhase, focusBounds, focusViewport, activeFocus,
     hasSeenScrollHint, markScrollHintSeen, finishFocusTransition, resetFocus,
-    layoutFocusViewport, openFocusedArea, closeFocusedArea, diagramSizes,
+    layoutFocusViewport, openFocusedArea, closeFocusedArea, updateClosedScroll, diagramSizes,
   } = useFridgeFocus(0, isFocusBlocked);
   const finishHomeFocus = useCallback((phase: FridgeFocusPhase) => {
     finishFocusTransition(phase);
@@ -158,7 +157,6 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
   }, [setSelectedAreaId]);
 
   const loadRefrigerator = useCallback(() => runLoad(async isCurrent => {
-    closedScrollY.current = 0;
     resetFocus();
     setSelectedSlot(null);
     setIsIngredientListOpen(false);
@@ -293,14 +291,6 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
     toolbarChanging.current = true;
     setIsToolbarChanging(true);
     setIsToolbarExpanded(current => !current);
-  }
-
-  function updateClosedScroll(y: number) {
-    const shift = closedScrollY.current - y;
-    closedScrollY.current = y;
-    // 배경 스크롤이 표시 영역에 맞게 보정돼도 문이 실제 원래 자리로 돌아가게 한다.
-    if (activeFocus && shift !== 0) setFocusTarget(current => current
-      ? { ...current, canvas: { ...current.canvas, y: current.canvas.y + shift } } : current);
   }
 
   // 하단 안전 영역은 탭바가 확보하며, 도구와 도면은 탭바 위의 같은 영역을 사용한다.

@@ -3,7 +3,7 @@
  * 등록·홈 도면의 문을 누르면 본체와 연결된 도어 포켓을 함께 열어 화면 중앙에서 보여준다.
  * 문 수납·칸 편집은 호출자가 관리하며, 내부 표시와 선택 효과는 FridgeMap을 재사용한다.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ComponentRef, ReactNode } from 'react';
 import { Animated, Easing, Keyboard, Pressable, ScrollView, StyleSheet, Text, View, useAnimatedValue, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -61,6 +61,7 @@ export function useFridgeFocus(reservedBottom = 0, isBlocked?: () => boolean) {
   const focusViewport = useRef<ComponentRef<typeof View>>(null);
   const viewportSize = useRef<{ width: number; height: number } | null>(null);
   const openRequest = useRef(0);
+  const closedScrollY = useRef(0);
   const activeFocus = focusPhase === 'closed' ? null : focusTarget;
   const isFocusMoving = focusPhase === 'opening' || focusPhase === 'closing';
   const finishFocusTransition = useCallback((phase: FridgeFocusPhase) => {
@@ -70,6 +71,7 @@ export function useFridgeFocus(reservedBottom = 0, isBlocked?: () => boolean) {
   const markScrollHintSeen = useCallback(() => setHasSeenScrollHint(true), []);
   const resetFocus = useCallback(() => {
     openRequest.current++;
+    closedScrollY.current = 0;
     setFocusPhase('closed');
     setFocusTarget(null);
     setSelectedAreaId(null);
@@ -104,10 +106,19 @@ export function useFridgeFocus(reservedBottom = 0, isBlocked?: () => boolean) {
     setFocusPhase('closing');
   }, [activeFocus, focusPhase, isBlocked]);
 
+  const updateClosedScroll = useCallback((y: number) => {
+    const shift = closedScrollY.current - y;
+    closedScrollY.current = y;
+    // 배경 도면의 스크롤 위치가 바뀌면 복귀할 문 좌표도 같이 옮긴다.
+    if (focusPhase === 'closed' || shift === 0) return;
+    setFocusTarget(current => current
+      ? { ...current, canvas: { ...current.canvas, y: current.canvas.y + shift } } : current);
+  }, [focusPhase]);
+
   return {
     selectedAreaId, setSelectedAreaId, focusTarget, setFocusTarget, focusPhase, focusBounds, focusViewport,
     activeFocus, isFocusMoving, hasSeenScrollHint, markScrollHintSeen, finishFocusTransition,
-    resetFocus, layoutFocusViewport, openFocusedArea, closeFocusedArea, diagramSizes,
+    resetFocus, layoutFocusViewport, openFocusedArea, closeFocusedArea, updateClosedScroll, diagramSizes,
   };
 }
 
@@ -563,8 +574,8 @@ export function FridgeFocusView({ draft, target, viewport, overlayHeight, phase,
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const laidOutHorizontalOffset = useRef<{ x: number; y: number } | null>(null);
   const verticalScrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
-  const [scrollPosition, setScrollPosition] = useState({ key: '', x: 0, y: 0 });
-  const latestScrollPosition = useRef(scrollPosition);
+  const latestScrollPosition = useRef({ key: '', x: 0, y: 0 });
+  const [closingScrollPosition, setClosingScrollPosition] = useState<typeof latestScrollPosition.current | null>(null);
   const previousVertical = useRef({ key: '', enabled: false });
   const geometry = getFridgeFocusGeometry(draft, target, viewport, sizeViewport, flushVerticalEdges);
   const layout = getDraftLayout(draft, ingredients, t);
@@ -576,42 +587,38 @@ export function FridgeFocusView({ draft, target, viewport, overlayHeight, phase,
   const maxScrollY = geometry ? Math.max(0, geometry.contentHeight - geometry.scrollViewportHeight) : 0;
   const maxScrollX = geometry ? Math.max(0, geometry.contentWidth - viewport.width) : 0;
   const horizontalViewKey = scrollable ? `${scrollKey}:${verticalScrollable}` : '';
-  const [horizontalStart, setHorizontalStart] = useState({ key: '', offset: { x: 0, y: 0 } });
-  let horizontalOffset = horizontalStart.offset;
+  const [horizontalStart, setHorizontalStart] = useState(() => ({ key: horizontalViewKey, offset: { x: initialScrollX, y: 0 } }));
+  const horizontalOffset = horizontalStart.key === horizontalViewKey ? horizontalStart.offset : undefined;
   // contentOffset은 스크롤 뷰가 붙을 때만 설정하고 네이티브 스크롤 이벤트를 다시 입력하지 않는다.
-  if (horizontalStart.key !== horizontalViewKey) {
-    const x = scrollPosition.key === scrollKey ? Math.min(scrollPosition.x, maxScrollX) : initialScrollX;
-    horizontalOffset = { x, y: 0 };
-    setHorizontalStart({ key: horizontalViewKey, offset: horizontalOffset });
-  }
-
-  useEffect(() => {
-    if (!scrollable) return;
+  useLayoutEffect(() => {
     const current = latestScrollPosition.current;
-    const currentX = current.key === scrollKey ? current.x : horizontalOffset.x;
+    const currentX = current.key === scrollKey ? current.x : initialScrollX;
     const x = Math.min(currentX, maxScrollX);
-    if (x !== currentX) scrollRef.current?.scrollTo({ x, animated: false });
+    if (!horizontalOffset) setHorizontalStart({ key: horizontalViewKey, offset: { x, y: 0 } });
+    if (!scrollable) return;
+    if (horizontalOffset && x !== currentX) scrollRef.current?.scrollTo({ x, animated: false });
     if (current.key === scrollKey && x === currentX) return;
-    const next = { key: scrollKey, x, y: current.key === scrollKey ? current.y : 0 };
-    latestScrollPosition.current = next;
-    setScrollPosition(next);
-  }, [scrollable, horizontalOffset, scrollKey, maxScrollX]);
+    latestScrollPosition.current = { key: scrollKey, x, y: current.key === scrollKey ? current.y : 0 };
+  }, [scrollable, horizontalOffset, horizontalViewKey, scrollKey, initialScrollX, maxScrollX]);
 
   // 툴바 높이만 달라지면 기존 스크롤을 보존하고, 새 표시 범위를 벗어난 값만 보정한다.
-  useEffect(() => {
+  useLayoutEffect(() => {
     const previous = previousVertical.current;
     const current = latestScrollPosition.current;
     const y = current.key === scrollKey ? Math.min(current.y, maxScrollY) : 0;
-    const next = { key: scrollKey, x: current.key === scrollKey ? current.x : initialScrollX, y };
     if (verticalScrollable && (!previous.enabled || previous.key !== scrollKey || y !== current.y)) {
       verticalScrollRef.current?.scrollTo({ y, animated: false });
     }
     if (current.key === scrollKey && y !== current.y) {
-      latestScrollPosition.current = next;
-      setScrollPosition(next);
+      latestScrollPosition.current = { ...current, y };
     }
     previousVertical.current = { key: scrollKey, enabled: verticalScrollable };
-  }, [verticalScrollable, scrollKey, maxScrollY, initialScrollX]);
+  }, [verticalScrollable, scrollKey, maxScrollY]);
+
+  // 스크롤 중에는 다시 그리지 않고, 닫기 전에 보정된 최신 좌표를 애니메이션에 반영한다.
+  useLayoutEffect(() => {
+    if (phase === 'closing') setClosingScrollPosition(latestScrollPosition.current);
+  }, [phase, scrollKey, maxScrollX, maxScrollY]);
 
   useEffect(() => {
     if (phase !== 'opening' && phase !== 'closing') return;
@@ -657,16 +664,15 @@ export function FridgeFocusView({ draft, target, viewport, overlayHeight, phase,
   const { row, rowIndex, group, body, pockets, doors } = geometry;
   const bodyCorners = doorGaps ? HOME_DOOR_CORNERS : getGridCorners(getGridEdges(row, rowIndex, draft.rows.length, group.body.doorIds));
   const hasScrollView = scrollable || verticalScrollable;
-  const scrollShift = scrollable && scrollPosition.key === scrollKey ? Math.min(scrollPosition.x, maxScrollX) - initialScrollX : 0;
-  const scrollShiftY = verticalScrollable && scrollPosition.key === scrollKey ? Math.min(scrollPosition.y, maxScrollY) : 0;
+  const closingOffset = phase === 'closing' && closingScrollPosition?.key === scrollKey ? closingScrollPosition : null;
+  const scrollShift = scrollable && closingOffset ? Math.min(closingOffset.x, maxScrollX) - initialScrollX : 0;
+  const scrollShiftY = verticalScrollable && closingOffset ? Math.min(closingOffset.y, maxScrollY) : 0;
 
   function updateScrollPosition(x?: number, y?: number) {
     const current = latestScrollPosition.current;
-    const next = { key: scrollKey,
+    latestScrollPosition.current = { key: scrollKey,
       x: x ?? (current.key === scrollKey ? current.x : initialScrollX),
       y: y ?? (current.key === scrollKey ? current.y : 0) };
-    latestScrollPosition.current = next;
-    setScrollPosition(next);
   }
   const area = layout.areas.find(candidate => candidate.id === group.body.id)!;
   const counts = ingredients ? getAreaIngredientCounts(layout, [area.id, ...group.body.doorIds], now) : undefined;
@@ -763,7 +769,7 @@ export function FridgeFocusView({ draft, target, viewport, overlayHeight, phase,
       importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
       contentOffset={horizontalOffset} scrollEventThrottle={16}
       onContentSizeChange={() => {
-        if (laidOutHorizontalOffset.current === horizontalOffset) return;
+        if (!horizontalOffset || laidOutHorizontalOffset.current === horizontalOffset) return;
         laidOutHorizontalOffset.current = horizontalOffset;
         // 네이티브가 초기 위치를 콘텐츠 너비보다 먼저 받으면 위치가 잘릴 수 있다.
         if (horizontalOffset.x > 0) scrollRef.current?.scrollTo({ x: horizontalOffset.x, animated: false });

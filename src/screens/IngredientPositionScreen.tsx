@@ -47,12 +47,11 @@ export function IngredientPositionScreen({ navigation, route }: IngredientPositi
   const [isSaving, setIsSaving] = useState(false);
   const saving = useRef(false);
   const leaving = useRef(false);
-  const closedScrollY = useRef(0);
   const loadRequest = useRef(0);
   const isFocusBlocked = useCallback(() => saving.current, []);
-  const { selectedAreaId, setSelectedAreaId, setFocusTarget, focusPhase, focusBounds, focusViewport, activeFocus,
+  const { selectedAreaId, setSelectedAreaId, focusPhase, focusBounds, focusViewport, activeFocus,
     hasSeenScrollHint, markScrollHintSeen, finishFocusTransition, resetFocus,
-    layoutFocusViewport, openFocusedArea, closeFocusedArea, diagramSizes } = useFridgeFocus(0, isFocusBlocked);
+    layoutFocusViewport, openFocusedArea, closeFocusedArea, updateClosedScroll, diagramSizes } = useFridgeFocus(0, isFocusBlocked);
   const finishPositionFocus = useCallback((phase: FridgeFocusPhase) => {
     finishFocusTransition(phase);
     if (phase === 'closed') setSelectedSlot(null);
@@ -63,7 +62,6 @@ export function IngredientPositionScreen({ navigation, route }: IngredientPositi
     setResult(null);
     resetFocus();
     setSelectedSlot(null);
-    closedScrollY.current = 0;
     try {
       const record = 'id' in params ? await getConsumedIngredient(db, params) : null;
       if ('id' in params && !record) throw new AppError('errors.consumedIngredientMissing');
@@ -156,13 +154,6 @@ export function IngredientPositionScreen({ navigation, route }: IngredientPositi
       leaving.current = true;
       navigation.goBack();
     } }], { cancelable: false });
-  }
-
-  function updateClosedScroll(y: number) {
-    const shift = closedScrollY.current - y;
-    closedScrollY.current = y;
-    if (activeFocus && shift !== 0) setFocusTarget(current => current
-      ? { ...current, canvas: { ...current.canvas, y: current.canvas.y + shift } } : current);
   }
 
   return (
