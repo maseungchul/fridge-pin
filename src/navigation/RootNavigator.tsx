@@ -47,6 +47,7 @@ export function RootNavigator() {
     return result;
   }, []);
   const ingredientSearchResult = useRef<string | null>(null);
+  const navigateHome = useRef<(() => void) | null>(null);
   const takeIngredientSearchResult = useCallback(() => {
     const id = ingredientSearchResult.current;
     ingredientSearchResult.current = null;
@@ -63,7 +64,8 @@ export function RootNavigator() {
     >
       <Stack.Screen name="MainTabs">
         {props => <MainTabNavigator {...props} takeIngredientFormResult={takeIngredientFormResult}
-          takeIngredientSearchResult={takeIngredientSearchResult} />}
+          takeIngredientSearchResult={takeIngredientSearchResult} navigateHomeRef={navigateHome}
+          openSearch={() => props.navigation.navigate('IngredientSearch')} />}
       </Stack.Screen>
       <Stack.Screen
         component={RefrigeratorRegistrationScreen}
@@ -77,7 +79,7 @@ export function RootNavigator() {
         {props => <IngredientFormScreen {...props} onResultChange={updateIngredientFormResult} />}
       </Stack.Screen>
       <Stack.Screen name="IngredientSearch">
-        {props => <IngredientSearchScreen {...props} onSelectIngredient={id => { ingredientSearchResult.current = id; }} />}
+        {props => <IngredientSearchScreen {...props} onSelectIngredient={id => { ingredientSearchResult.current = id; navigateHome.current?.(); }} />}
       </Stack.Screen>
       <Stack.Screen name="IngredientRestore" component={IngredientPositionScreen} />
       <Stack.Screen name="IngredientAssign" component={IngredientPositionScreen} />

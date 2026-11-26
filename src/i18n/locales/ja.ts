@@ -12,6 +12,7 @@ export const ja: Record<keyof typeof ko, string> = {
   'common.close': '閉じる',
   'common.required': '必須',
   'tabs.fridge': '冷蔵庫',
+  'tabs.search': '検索',
   'tabs.shopping': '買い物',
   'tabs.more': 'その他',
   'shopping.plannedTab': 'リスト',

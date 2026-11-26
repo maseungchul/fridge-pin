@@ -329,10 +329,6 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                       onPress={() => navigation.navigate('RefrigeratorRegistration', { refrigeratorId: refrigerator.id })}>
                       <MaterialDesignIcons name="pencil" size={24} color={colors.text} accessible={false} />
                     </FeedbackPressable>
-                    <FeedbackPressable iconFeedback accessibilityRole="button" accessibilityLabel={t('search.open')} style={styles.headerIconButton}
-                      onPress={() => navigation.navigate('IngredientSearch')}>
-                      <MaterialDesignIcons name="magnify" size={24} color={colors.text} accessible={false} />
-                    </FeedbackPressable>
                   </View> : null}
                 </View>
                 {refrigerator ? <View style={styles.diagram}>

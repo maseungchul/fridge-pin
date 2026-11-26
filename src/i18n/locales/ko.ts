@@ -10,6 +10,7 @@ export const ko = {
   'common.close': '닫기',
   'common.required': '필수',
   'tabs.fridge': '냉장고',
+  'tabs.search': '검색',
   'tabs.shopping': '장보기',
   'tabs.more': '더보기',
   'shopping.plannedTab': '목록',

@@ -24,6 +24,7 @@ import type { IngredientFormResult } from '@/screens/IngredientFormScreen';
 
 export type MainTabParamList = {
   Home: undefined;
+  Search: undefined;
   Shopping: undefined;
   More: undefined;
 };
@@ -32,6 +33,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 const allowTabLabelFontScaling = !(Platform.OS === 'ios' && parseInt(Platform.Version, 10) >= 13);
 const tabIcons = {
   Home: require('../../assets/tab-fridge.svg'),
+  Search: require('../../assets/tab-search.svg'),
   Shopping: require('../../assets/tab-shopping.svg'),
   More: require('../../assets/tab-more.svg'),
 };
@@ -68,7 +70,9 @@ function MainTabButton({ children, disabled, onTouchStart, onPressIn, onPressOut
   );
 }
 
-export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearchResult }: {
+export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearchResult, openSearch, navigateHomeRef }: {
+  openSearch: () => void;
+  navigateHomeRef: React.RefObject<(() => void) | null>;
   takeIngredientFormResult: () => IngredientFormResult | null;
   takeIngredientSearchResult: () => string | null;
 }) {
@@ -79,6 +83,7 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
   const { t } = useTranslation();
   const tabLabels = {
     Home: t('tabs.fridge'),
+    Search: t('tabs.search'),
     Shopping: t('tabs.shopping'),
     More: t('tabs.more'),
   };
@@ -149,7 +154,7 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
       tabBarLabelVisibilityMode: 'labeled',
       tabBarAccessibilityLabel: tabLabels[route.name],
       tabBarLabelPosition: 'below-icon',
-      tabBarIconSize: 34,
+      tabBarIconSize: 32,
       tabBarIconStyle: styles.icon,
       tabBarIcon: ({ focused, color, size }) => (
         <View style={[styles.icon, focused && styles.selectedIcon]} pointerEvents="none">
@@ -201,6 +206,14 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
       <Tab.Screen name="Shopping">
         {props => <ShoppingScreen {...props} onSelectionModeChange={handleShoppingSelectionChange} />}
       </Tab.Screen>
+      {/* 검색은 별도 화면으로 열어 현재 탭의 선택 상태를 유지한다. */}
+      <Tab.Screen name="Search" component={EmptySearchTab} listeners={({ navigation }) => ({
+        tabPress: event => {
+          event.preventDefault();
+          navigateHomeRef.current = () => navigation.navigate('Home');
+          openSearch();
+        },
+      })} />
       <Tab.Screen name="More">
         {() => <MoreStackNavigator onTabInteractionBlockedChange={setIsTabInteractionBlocked}
           onRefrigeratorDeleted={navigate => {
@@ -212,6 +225,8 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
     </Tab.Navigator>
   );
 }
+
+function EmptySearchTab() { return null; }
 
 const getStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   scene: { backgroundColor: colors.background },
@@ -227,8 +242,8 @@ const getStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   item: { marginHorizontal: spacing.xs },
   button: { minHeight: 44, borderRadius: 18, paddingTop: 8, paddingBottom: 0, justifyContent: 'center' },
   // 선택 배경 전체를 아이콘 슬롯에 넣어 아래 라벨과 겹치지 않게 한다.
-  icon: { width: 52, height: 36, alignItems: 'center', justifyContent: 'center' },
-  shoppingIcon: { width: 38, height: 38, transform: [{ translateY: -1 }] },
+  icon: { width: 50, height: 34, alignItems: 'center', justifyContent: 'center' },
+  shoppingIcon: { width: 36, height: 36, transform: [{ translateY: -1 }] },
   selectedIcon: { borderRadius: 18, backgroundColor: colors.chipSelected },
   label: { fontSize: 12, lineHeight: 13, fontWeight: '600', marginTop: 1, textAlign: 'center' },
   lightLabel: { fontWeight: '500' },
