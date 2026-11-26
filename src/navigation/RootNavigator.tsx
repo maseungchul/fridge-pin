@@ -78,7 +78,7 @@ export function RootNavigator() {
       }}>
         {props => <IngredientFormScreen {...props} onResultChange={updateIngredientFormResult} />}
       </Stack.Screen>
-      <Stack.Screen name="IngredientSearch">
+      <Stack.Screen name="IngredientSearch" options={{ animation: 'none' }}>
         {props => <IngredientSearchScreen {...props} onSelectIngredient={id => { ingredientSearchResult.current = id; navigateHome.current?.(); }} />}
       </Stack.Screen>
       <Stack.Screen name="IngredientRestore" component={IngredientPositionScreen} />
