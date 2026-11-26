@@ -149,6 +149,7 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', borderRadius: 24 },
   content: { flexGrow: 1, padding: spacing.md },
   search: { minHeight: 44, marginHorizontal: spacing.md, marginTop: spacing.md, paddingHorizontal: spacing.md,
+    paddingVertical: 0, includeFontPadding: false, textAlignVertical: 'center',
     borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border, borderRadius: 12, color: colors.text, fontSize: 16 },
   row: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: TAG_ICON_GAP,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },

@@ -322,8 +322,9 @@ const getStyles = createThemedStyles(({ colors }, mode) => StyleSheet.create({
   searchTagText: { flexShrink: 1, fontSize: 16, lineHeight: SEARCH_TEXT_LINE_HEIGHT, color: colors.chilled },
   activeSearchField: { flexGrow: 1, flexBasis: 100, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   inputContainer: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  input: { minHeight: SEARCH_TEXT_LINE_HEIGHT, color: colors.text, fontSize: 16, lineHeight: SEARCH_TEXT_LINE_HEIGHT,
-    paddingRight: spacing.sm, paddingVertical: 0 },
+  // 입력 글자의 기준선은 네이티브 한 줄 입력에 맡기고 검색 행 안에서 가운데에 둔다.
+  input: { height: SEARCH_TEXT_LINE_HEIGHT, color: colors.text, fontSize: 16,
+    paddingRight: spacing.sm, paddingVertical: 0, includeFontPadding: false, textAlignVertical: 'center' },
   tagInput: { marginLeft: TAG_ICON_GAP - spacing.sm },
   tagInputText: { color: colors.chilled },
   tagPlaceholder: { position: 'absolute', left: 0, color: mode === 'dark' ? '#83A590' : colors.chilledPressed,
