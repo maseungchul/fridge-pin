@@ -110,8 +110,8 @@ export function DoorHandle({ horizontal = false, storageMode, style }: {
   );
 }
 
-/** 문 손잡이 반대편 상단에 작은 냉장·냉동 아이콘만 표시한다. */
-export function DoorModeArt({ storageMode, size, handleOnLeft = false, style }: {
+/** 냉장·냉동 아이콘을 표시하고, 손잡이 방향이 주어지면 문 상단 반대편에 배치한다. */
+export function DoorModeArt({ storageMode, size, handleOnLeft, style }: {
   storageMode: StorageMode | null; size: number; handleOnLeft?: boolean; style?: StyleProp<ViewStyle>;
 }) {
   const { mode, fridgeDoorColors } = useAppTheme();
@@ -122,7 +122,8 @@ export function DoorModeArt({ storageMode, size, handleOnLeft = false, style }: 
   const color = palette.motif;
   return (
     <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-      style={[styles.modeArt, handleOnLeft ? styles.modeArtRight : styles.modeArtLeft, style]}>
+      style={[handleOnLeft !== undefined && styles.modeArt,
+        handleOnLeft === true && styles.modeArtRight, handleOnLeft === false && styles.modeArtLeft, style]}>
       <MaterialDesignIcons name={frozen ? 'snowflake' : 'weather-windy'} size={size} color={color} accessible={false} />
     </View>
   );

@@ -61,7 +61,7 @@ const getStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   title: { color: colors.text, fontSize: COMPACT_HEADER_TITLE_SIZE, lineHeight: COMPACT_HEADER_TITLE_LINE_HEIGHT, fontWeight: '700' },
   item: { gap: 4 },
   itemHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  modeIcon: { position: 'relative', top: 0, left: 0, width: INGREDIENT_BADGE_SIZE, height: INGREDIENT_BADGE_SIZE,
+  modeIcon: { width: INGREDIENT_BADGE_SIZE, height: INGREDIENT_BADGE_SIZE,
     alignItems: 'center', justifyContent: 'center' },
   itemTitle: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '600' },
   itemDescription: { marginLeft: INGREDIENT_BADGE_SIZE + spacing.md, color: colors.textMuted, fontSize: 14, lineHeight: 21 },
