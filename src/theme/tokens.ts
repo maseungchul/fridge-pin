@@ -61,11 +61,6 @@ export const ingredientBadgeColors = {
   unknown: '#77776F',
 } as const;
 
-// 재료 라벨은 도면 바탕이 비치도록 배경과 테두리 없이 표시한다.
-export const ingredientLabelColors = {
-  background: 'transparent',
-} as const;
-
 // 냉장고 도면은 흰 프레임 안에 모드별 배경과 밝은 수납함을 배치한다.
 export const fridgeSurfaces = {
   border: '#C8C8C8',
