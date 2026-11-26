@@ -157,7 +157,7 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
       tabBarIconSize: 28,
       tabBarIconStyle: styles.icon,
       tabBarIcon: ({ focused, color, size }) => (
-        <View style={[styles.icon, focused && styles.selectedIcon]} pointerEvents="none">
+        <View style={[styles.icon, (focused || pressedTab === route.name) && styles.selectedIcon]} pointerEvents="none">
           <Image source={tabIcons[route.name]} style={[{ width: size, height: size }, route.name === 'Shopping' && styles.shoppingIcon]}
             contentFit="contain" tintColor={pressedTab === route.name ? colors.chilled : color} accessible={false} />
         </View>
