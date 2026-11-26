@@ -154,7 +154,7 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
       tabBarLabelVisibilityMode: 'labeled',
       tabBarAccessibilityLabel: tabLabels[route.name],
       tabBarLabelPosition: 'below-icon',
-      tabBarIconSize: 32,
+      tabBarIconSize: 28,
       tabBarIconStyle: styles.icon,
       tabBarIcon: ({ focused, color, size }) => (
         <View style={[styles.icon, focused && styles.selectedIcon]} pointerEvents="none">
@@ -243,9 +243,9 @@ const getStyles = createThemedStyles(({ colors }) => StyleSheet.create({
   button: { minHeight: 44, borderRadius: 18, paddingTop: 8, paddingBottom: 0, justifyContent: 'center' },
   // 선택 배경 전체를 아이콘 슬롯에 넣어 아래 라벨과 겹치지 않게 한다.
   icon: { width: 50, height: 34, alignItems: 'center', justifyContent: 'center' },
-  shoppingIcon: { width: 36, height: 36, transform: [{ translateY: -1 }] },
-  selectedIcon: { borderRadius: 18, backgroundColor: colors.chipSelected },
-  label: { fontSize: 12, lineHeight: 13, fontWeight: '600', marginTop: 1, textAlign: 'center' },
+  shoppingIcon: { width: 32, height: 32, transform: [{ translateY: -1 }] },
+  selectedIcon: { width: 46, height: 30, borderRadius: 15, backgroundColor: colors.chipSelected },
+  label: { fontSize: 11, lineHeight: 13, fontWeight: '600', marginTop: 1, textAlign: 'center' },
   lightLabel: { fontWeight: '500' },
   selectedLightLabel: { fontWeight: '700' },
 }));
