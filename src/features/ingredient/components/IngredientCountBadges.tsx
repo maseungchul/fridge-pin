@@ -20,6 +20,13 @@ const badgeIcons = {
   expired: require('../../../../assets/ingredient-badge-expired.svg'),
   unknown: require('../../../../assets/ingredient-badge-unknown.svg'),
 };
+// 라이트 모드의 게이지는 상태별 배경과 같은 계열의 밝은 색으로 표시한다.
+const lightGaugeColors = {
+  normal: '#ACD5B8',
+  warning: '#F4C396',
+  expired: '#F2B7BA',
+  unknown: '#CBCBC2',
+};
 
 /** 색을 구별하지 못하는 경우에도 실제 건수와 기한 상태를 함께 안내한다. */
 export function getIngredientCountLabel(counts: IngredientCounts, t: Translator = defaultTranslate) {
@@ -34,13 +41,13 @@ export function getIngredientCountLabel(counts: IngredientCounts, t: Translator 
 export function IngredientCountBadge({ count, kind, style }: {
   count?: number; kind: typeof badgeKinds[number]; style?: StyleProp<ViewStyle>;
 }) {
-  const { colors, ingredientBadgeColors } = useAppTheme();
+  const { mode, colors, ingredientBadgeColors } = useAppTheme();
   const backgroundColor = ingredientBadgeColors[kind];
   const color = colors.badgeText;
   const iconSize = count === undefined ? 24 : 22;
   return (
     <View style={[styles.badge, count === undefined && styles.legendBadge, { backgroundColor }, style]}>
-      <Image source={badgeIcons[kind]} contentFit="contain" tintColor={color}
+      <Image source={badgeIcons[kind]} contentFit="contain" tintColor={mode === 'light' ? lightGaugeColors[kind] : color}
         style={[styles.icon, { width: iconSize, height: iconSize }]} accessible={false} />
       {count !== undefined ? (
         <Text style={[styles.count, { color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} maxFontSizeMultiplier={1}>{count > 99 ? '99+' : count}</Text>
