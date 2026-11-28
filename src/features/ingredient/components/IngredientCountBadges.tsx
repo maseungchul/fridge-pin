@@ -12,7 +12,6 @@ import { defaultTranslate } from '@/i18n/translations';
 import type { Translator } from '@/i18n/translations';
 
 export const INGREDIENT_BADGE_SIZE = 28;
-const BADGE_ROW_HEIGHT = 20;
 const badgeKinds = ['normal', 'warning', 'expired', 'unknown'] as const;
 // 도면에서 쓰는 상태 모양을 범례에서도 같은 SVG로 표시한다.
 const badgeIcons = {
@@ -38,13 +37,13 @@ export function IngredientCountBadge({ count, kind, style }: {
   const { colors, ingredientBadgeColors } = useAppTheme();
   const backgroundColor = ingredientBadgeColors[kind];
   const color = colors.badgeText;
-  const iconSize = count === undefined ? 22 : 16;
+  const iconSize = count === undefined ? 24 : 22;
   return (
-    <View style={[styles.badge, styles.countBadge, count === undefined && styles.legendBadge, { backgroundColor }, style]}>
+    <View style={[styles.badge, count === undefined && styles.legendBadge, { backgroundColor }, style]}>
       <Image source={badgeIcons[kind]} contentFit="contain" tintColor={color}
         style={[styles.icon, { width: iconSize, height: iconSize }]} accessible={false} />
       {count !== undefined ? (
-        <Text style={[styles.count, { color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.2}>{count > 99 ? '99+' : count}</Text>
+        <Text style={[styles.count, { color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} maxFontSizeMultiplier={1}>{count > 99 ? '99+' : count}</Text>
       ) : null}
     </View>
   );
@@ -62,11 +61,9 @@ export function IngredientCountBadges({ counts, placement = 'center', direction 
   return (
     <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
       style={[styles.center, upper && { alignItems: alignment, justifyContent: 'flex-start' }, style]}>
-      {/* 바깥 묶음만 둥글게 잘라 0건 상태가 빠져도 양 끝 모양을 유지한다. */}
       <View style={[styles.badges, direction === 'horizontal' && styles.horizontalBadges]}>
         {badgeKinds.filter(kind => counts[kind] > 0).map(kind => (
-          <IngredientCountBadge key={kind} count={counts[kind]} kind={kind}
-            style={[styles.mergedBadge, direction === 'horizontal' && styles.horizontalBadge]} />
+          <IngredientCountBadge key={kind} count={counts[kind]} kind={kind} />
         ))}
       </View>
     </View>
@@ -76,20 +73,16 @@ export function IngredientCountBadges({ counts, placement = 'center', direction 
 const styles = StyleSheet.create({
   center: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   badges: {
-    maxWidth: '100%', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start',
-    borderRadius: BADGE_ROW_HEIGHT / 2, overflow: 'hidden', gap: 1,
+    maxWidth: '100%', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: 2,
   },
   // 좁은 수납칸에서는 배지를 두 줄로 배치해 본체 너비에 영향을 주지 않는다.
-  horizontalBadges: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', borderRadius: 0 },
-  mergedBadge: { borderRadius: 0 },
-  horizontalBadge: { maxWidth: '100%', borderRadius: BADGE_ROW_HEIGHT / 2 },
-  // 홈·내부 칸 모두 같은 간격으로 아이콘과 숫자의 왼쪽을 맞춘다.
-  badge: { minWidth: 0, minHeight: BADGE_ROW_HEIGHT, paddingHorizontal: 2, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: 3 },
-  countBadge: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: BADGE_ROW_HEIGHT / 2 },
+  horizontalBadges: { width: '100%', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start' },
+  badge: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   legendBadge: {
     width: INGREDIENT_BADGE_SIZE, height: INGREDIENT_BADGE_SIZE, borderRadius: INGREDIENT_BADGE_SIZE / 2,
-    paddingHorizontal: 2, justifyContent: 'center',
+    justifyContent: 'center',
   },
   icon: { flexShrink: 0 },
-  count: { flexShrink: 1, fontSize: 11, textAlignVertical: 'center', fontWeight: '700', fontVariant: ['tabular-nums'], includeFontPadding: false },
+  count: { position: 'absolute', width: 15, textAlign: 'center', fontSize: 10, textAlignVertical: 'center',
+    fontWeight: '700', fontVariant: ['tabular-nums'], includeFontPadding: false },
 });
