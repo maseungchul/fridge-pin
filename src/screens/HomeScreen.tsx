@@ -588,7 +588,7 @@ const getStyles = createThemedStyles(({ colors, fridgeDoorColors }, mode) => Sty
     paddingHorizontal: spacing.sm, borderRadius: 20, borderWidth: mode === 'dark' ? 0 : 1,
     borderColor: mode === 'dark' ? colors.border : '#fff',
     backgroundColor: mode === 'dark' ? colors.surface : '#FAFAFA' },
-  homeLabel: { color: colors.text, fontSize: HOME_TOOL_LABEL_SIZE },
+  homeLabel: { color: mode === 'dark' ? '#C8CECB' : colors.text, fontSize: HOME_TOOL_LABEL_SIZE },
   toolbarDot: { position: 'absolute', top: -5, right: -3, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.chilled },
   toolbarDotOnToggle: { position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.chilled },
   toolbarShadow: { boxShadow: mode === 'dark'
