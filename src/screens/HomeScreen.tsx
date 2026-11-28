@@ -397,7 +397,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                         <FeedbackPressable accessibilityRole="button" accessibilityState={{ disabled: !canUseToolbar }}
                           interactionBlocked={!canUseToolbar}
                           onPress={() => { if (canUseToolbar && !toolbarChanging.current) setOpenLocationList('unassigned'); }}
-                          style={[styles.action, styles.homeAction, styles.toolbarShadow]} hitSlop={4}>
+                          style={[styles.action, styles.homeAction]} hitSlop={4}>
                           <View>
                             <MaterialDesignIcons name="map-marker-alert-outline" size={18} color={colors.chilled} accessible={false} />
                             {unassignedCount > 0 && isToolbarExpanded ? <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" /> : null}
@@ -408,7 +408,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                         accessibilityHint={hasQueuedIngredients ? t('queue.openHint', { count: queuedIngredients.length }) : t('queue.emptyDescription')}
                         accessibilityState={{ disabled: !canUseToolbar }} disabled={false} interactionBlocked={!canUseToolbar}
                         onPress={() => { if (canUseToolbar && !toolbarChanging.current) setOpenLocationList('queue'); }}
-                        style={[styles.action, styles.homeAction, styles.toolbarShadow]} hitSlop={4}>
+                        style={[styles.action, styles.homeAction]} hitSlop={4}>
                         <View>
                           <MaterialDesignIcons name="swap-horizontal" size={18} color={colors.chilled} accessible={false} />
                           {hasQueuedIngredients && isToolbarExpanded ? <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" /> : null}
@@ -419,7 +419,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                         accessibilityHint={hasUnseenConsumed ? t('consumed.unseenHint') : undefined}
                         accessibilityState={{ disabled: !canUseToolbar }} disabled={false} interactionBlocked={!canUseToolbar}
                         onPress={() => { if (canUseToolbar && !toolbarChanging.current) setIsConsumedOpen(true); }}
-                        style={[styles.action, styles.homeAction, styles.toolbarShadow]} hitSlop={4}>
+                        style={[styles.action, styles.homeAction]} hitSlop={4}>
                         <View>
                           <MaterialDesignIcons name="sticker-check-outline" size={18} color={colors.chilled} accessible={false} />
                           {hasUnseenConsumed && isToolbarExpanded ? <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" /> : null}
@@ -429,7 +429,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                       <FeedbackPressable accessibilityRole="button" accessibilityLabel={t('legend.open')}
                         accessibilityState={{ disabled: !canUseToolbar }} disabled={false} interactionBlocked={!canUseToolbar}
                         onPress={() => { if (canUseToolbar && !toolbarChanging.current) setIsLegendOpen(true); }}
-                        style={[styles.action, styles.homeAction, styles.toolbarShadow]} hitSlop={4}>
+                        style={[styles.action, styles.homeAction]} hitSlop={4}>
                         <MaterialDesignIcons name="map-legend" size={18} color={colors.chilled} accessible={false} />
                         <Text style={[styles.label, styles.homeLabel]} numberOfLines={1}>{t('legend.label')}</Text>
                       </FeedbackPressable>
@@ -444,7 +444,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                   ].filter(Boolean).join(' ') || undefined : undefined}
                   accessibilityState={{ expanded: isToolbarExpanded, disabled: isToolbarBlocked }}
                   disabled={false} interactionBlocked={isToolbarBlocked} onPress={toggleToolbar} feedback="none"
-                  style={[styles.toolbarToggle, styles.toolbarToggleShadow]} hitSlop={4}>
+                  style={styles.toolbarToggle} hitSlop={4}>
                   {({ pressed }) => <>
                     <MaterialDesignIcons name={isToolbarExpanded ? 'transfer-right' : 'transfer-left'} size={HOME_TOOL_ICON_SIZE}
                       color={pressed ? colors.sage : colors.chilled} accessible={false} />
@@ -585,21 +585,13 @@ const getStyles = createThemedStyles(({ colors, fridgeDoorColors }, mode) => Sty
   homeActions: { alignItems: 'center', paddingVertical: spacing.sm, paddingLeft: HOME_TOOLBAR_EDGE_SPACE,
     paddingRight: HOME_TOOLBAR_EDGE_SPACE + HOME_TOOLBAR_TOGGLE_OVERLAP },
   homeAction: { flex: 0, flexShrink: 0, maxWidth: undefined, minHeight: HOME_MENU_SIZE, flexDirection: 'row', gap: spacing.xs,
-    paddingHorizontal: spacing.sm, borderRadius: 20, borderWidth: mode === 'dark' ? 0 : 1,
-    borderColor: mode === 'dark' ? colors.border : '#fff',
-    backgroundColor: mode === 'dark' ? colors.surface : '#FAFAFA' },
+    paddingHorizontal: spacing.sm, borderRadius: 20, borderWidth: 0,
+    backgroundColor: colors.navigationBackground },
   homeLabel: { color: mode === 'dark' ? '#C8CECB' : colors.text, fontSize: HOME_TOOL_LABEL_SIZE },
   toolbarDot: { position: 'absolute', top: -5, right: -3, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.chilled },
   toolbarDotOnToggle: { position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.chilled },
-  toolbarShadow: { boxShadow: mode === 'dark'
-    ? [{ offsetX: 0, offsetY: 2, blurRadius: 8, color: `${colors.button}1F` }]
-    : [{ offsetX: 0, offsetY: 0, blurRadius: 3, color: '#0000001A' }] },
-  toolbarToggleShadow: { boxShadow: mode === 'dark'
-    ? [{ offsetX: 0, offsetY: 2, blurRadius: 8, color: `${colors.button}24` }]
-    : [{ offsetX: 0, offsetY: 0, blurRadius: 3, color: '#0000001A' }] },
   toolbarToggle: { zIndex: 1, width: HOME_MENU_SIZE, height: HOME_MENU_SIZE, flexShrink: 0, alignItems: 'center', justifyContent: 'center',
-    borderRadius: HOME_MENU_SIZE / 2, borderWidth: mode === 'dark' ? 0 : 1,
-    borderColor: '#fff', backgroundColor: mode === 'dark' ? colors.surface : '#FAFAFA' },
+    borderRadius: HOME_MENU_SIZE / 2, borderWidth: 0, backgroundColor: colors.navigationBackground },
   diagram: {
     flex: 1,
   },
