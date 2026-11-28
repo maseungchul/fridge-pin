@@ -409,7 +409,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                           style={[styles.action, styles.homeAction]} hitSlop={4}>
                           <View>
                             <Image source={homeToolbarIcons.unassigned} style={styles.homeActionIcon}
-                              contentFit="contain" tintColor={colors.chilled} accessible={false} />
+                              contentFit="contain" tintColor={colors.textMuted} accessible={false} />
                             {unassignedCount > 0 && isToolbarExpanded ? <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" /> : null}
                           </View>
                           <Text style={[styles.label, styles.homeLabel]} numberOfLines={1}>{t('unassigned.label')}</Text>
@@ -421,7 +421,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                         style={[styles.action, styles.homeAction]} hitSlop={4}>
                         <View>
                           <Image source={homeToolbarIcons.queue} style={styles.homeActionIcon}
-                            contentFit="contain" tintColor={colors.chilled} accessible={false} />
+                            contentFit="contain" tintColor={colors.textMuted} accessible={false} />
                           {hasQueuedIngredients && isToolbarExpanded ? <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" /> : null}
                         </View>
                         <Text style={[styles.label, styles.homeLabel]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('queue.pending')}</Text>
@@ -433,7 +433,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                         style={[styles.action, styles.homeAction]} hitSlop={4}>
                         <View>
                           <Image source={homeToolbarIcons.consumed} style={styles.homeActionIcon}
-                            contentFit="contain" tintColor={colors.chilled} accessible={false} />
+                            contentFit="contain" tintColor={colors.textMuted} accessible={false} />
                           {hasUnseenConsumed && isToolbarExpanded ? <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" /> : null}
                         </View>
                         <Text style={[styles.label, styles.homeLabel]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('consumed.title')}</Text>
@@ -443,7 +443,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                         onPress={() => { if (canUseToolbar && !toolbarChanging.current) setIsLegendOpen(true); }}
                         style={[styles.action, styles.homeAction]} hitSlop={4}>
                         <Image source={homeToolbarIcons.legend} style={styles.homeActionIcon}
-                          contentFit="contain" tintColor={colors.chilled} accessible={false} />
+                          contentFit="contain" tintColor={colors.textMuted} accessible={false} />
                         <Text style={[styles.label, styles.homeLabel]} numberOfLines={1}>{t('legend.label')}</Text>
                       </FeedbackPressable>
                     </Animated.ScrollView>
@@ -460,7 +460,7 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                   style={styles.toolbarToggle} hitSlop={4}>
                   {({ pressed }) => <>
                     <Image source={homeToolbarIcons.toggle} style={[styles.toolbarToggleIcon, isToolbarExpanded && styles.toolbarToggleIconReversed]}
-                      contentFit="contain" tintColor={pressed ? colors.sage : colors.chilled} accessible={false} />
+                      contentFit="contain" tintColor={pressed ? colors.sage : colors.textMuted} accessible={false} />
                     {!isToolbarExpanded && (unassignedCount > 0 || hasQueuedIngredients || hasUnseenConsumed) ? (
                       <View style={styles.toolbarDotOnToggle} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
                     ) : null}
@@ -603,8 +603,8 @@ const getStyles = createThemedStyles(({ colors, fridgeDoorColors }, mode) => Sty
   homeActionIcon: { width: 22, height: 22 },
   toolbarToggleIcon: { width: 22, height: 22 },
   toolbarToggleIconReversed: { transform: [{ scaleX: -1 }] },
-  homeLabel: { color: mode === 'dark' ? '#C8CECB' : colors.text, fontSize: HOME_TOOL_LABEL_SIZE },
-  toolbarDot: { position: 'absolute', top: -5, right: -3, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.chilled },
+  homeLabel: { color: colors.textMuted, fontSize: HOME_TOOL_LABEL_SIZE },
+  toolbarDot: { position: 'absolute', top: -3, right: -2, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.chilled },
   toolbarDotOnToggle: { position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.chilled },
   toolbarToggle: { zIndex: 1, width: HOME_MENU_SIZE, height: HOME_MENU_SIZE, flexShrink: 0, alignItems: 'center', justifyContent: 'center',
     borderRadius: HOME_MENU_SIZE / 2, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
