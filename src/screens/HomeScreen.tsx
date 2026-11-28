@@ -10,7 +10,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentRef, RefObject } from 'react';
 import { MaskedView } from '@expo/ui/community/masked-view';
-import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { ActivityIndicator, Animated, AppState, BackHandler, Easing, ScrollView, StyleSheet, Text, View, useAnimatedValue, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -324,7 +323,8 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                   {refrigerator ? <View style={styles.headerActions}>
                     <FeedbackPressable iconFeedback accessibilityRole="button" accessibilityLabel={t('fridge.edit')} style={styles.headerIconButton}
                       onPress={() => navigation.navigate('RefrigeratorRegistration', { refrigeratorId: refrigerator.id })}>
-                      <MaterialDesignIcons name="pencil" size={24} color={colors.text} accessible={false} />
+                      <Image source={require('../../assets/home-edit.svg')} style={{ width: 24, height: 24 }}
+                        contentFit="contain" tintColor={colors.text} accessible={false} />
                     </FeedbackPressable>
                   </View> : null}
                 </View>
