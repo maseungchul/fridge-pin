@@ -6,6 +6,7 @@
  */
 import type { ReactNode } from 'react';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
+import { Image } from 'expo-image';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { FeedbackPressable } from '@/components/FeedbackPressable';
 import { IngredientCountBadges, getIngredientCountLabel } from '@/features/ingredient/components/IngredientCountBadges';
@@ -110,21 +111,26 @@ export function DoorHandle({ horizontal = false, storageMode, style }: {
   );
 }
 
-/** 냉장·냉동 아이콘을 표시하고, 손잡이 방향이 주어지면 문 상단 반대편에 배치한다. */
+const doorModeIcons = {
+  CHILLED: require('../../../../assets/fridge-mode-chilled.svg'),
+  FROZEN: require('../../../../assets/fridge-mode-frozen.svg'),
+};
+
+/** 범례와 도면에 같은 냉장·냉동 아이콘을 쓰고, 도면에서는 손잡이 반대편에 배치한다. */
 export function DoorModeArt({ storageMode, size, handleOnLeft, style }: {
   storageMode: StorageMode | null; size: number; handleOnLeft?: boolean; style?: StyleProp<ViewStyle>;
 }) {
   const { mode, fridgeDoorColors } = useAppTheme();
   const styles = getStyles(mode);
   if (!storageMode) return null;
-  const frozen = storageMode === 'FROZEN';
   const palette = fridgeDoorColors[storageMode];
   const color = palette.motif;
   return (
     <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
       style={[handleOnLeft !== undefined && styles.modeArt,
         handleOnLeft === true && styles.modeArtRight, handleOnLeft === false && styles.modeArtLeft, style]}>
-      <MaterialDesignIcons name={frozen ? 'snowflake' : 'weather-windy'} size={size} color={color} accessible={false} />
+      <Image source={doorModeIcons[storageMode]} style={{ width: size, height: size }}
+        contentFit="contain" tintColor={color} accessible={false} />
     </View>
   );
 }

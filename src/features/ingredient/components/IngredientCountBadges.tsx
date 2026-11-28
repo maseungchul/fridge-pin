@@ -5,7 +5,7 @@
  */
 import { StyleSheet, Text, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
+import { Image } from 'expo-image';
 import type { IngredientCounts } from '@/features/ingredient/model/ingredient';
 import { useAppTheme } from '@/theme/ThemeProvider';
 import { defaultTranslate } from '@/i18n/translations';
@@ -14,7 +14,13 @@ import type { Translator } from '@/i18n/translations';
 export const INGREDIENT_BADGE_SIZE = 28;
 const BADGE_ROW_HEIGHT = 20;
 const badgeKinds = ['normal', 'warning', 'expired', 'unknown'] as const;
-const badgeIcons = { normal: 'circle-slice-1', warning: 'circle-slice-6', expired: 'circle-slice-8', unknown: 'help-circle-outline' } as const;
+// 도면에서 쓰는 상태 모양을 범례에서도 같은 SVG로 표시한다.
+const badgeIcons = {
+  normal: require('../../../../assets/ingredient-badge-normal.svg'),
+  warning: require('../../../../assets/ingredient-badge-warning.svg'),
+  expired: require('../../../../assets/ingredient-badge-expired.svg'),
+  unknown: require('../../../../assets/ingredient-badge-unknown.svg'),
+};
 
 /** 색을 구별하지 못하는 경우에도 실제 건수와 기한 상태를 함께 안내한다. */
 export function getIngredientCountLabel(counts: IngredientCounts, t: Translator = defaultTranslate) {
@@ -32,11 +38,11 @@ export function IngredientCountBadge({ count, kind, style }: {
   const { colors, ingredientBadgeColors } = useAppTheme();
   const backgroundColor = ingredientBadgeColors[kind];
   const color = colors.badgeText;
-  const iconSize = count === undefined ? 22 : 14;
+  const iconSize = count === undefined ? 22 : 16;
   return (
     <View style={[styles.badge, styles.countBadge, count === undefined && styles.legendBadge, { backgroundColor }, style]}>
-      <MaterialDesignIcons name={badgeIcons[kind]} size={iconSize} color={color}
-        style={[styles.icon, { width: iconSize, height: iconSize, lineHeight: iconSize }]} accessible={false} />
+      <Image source={badgeIcons[kind]} contentFit="contain" tintColor={color}
+        style={[styles.icon, { width: iconSize, height: iconSize }]} accessible={false} />
       {count !== undefined ? (
         <Text style={[styles.count, { color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.2}>{count > 99 ? '99+' : count}</Text>
       ) : null}
@@ -84,6 +90,6 @@ const styles = StyleSheet.create({
     width: INGREDIENT_BADGE_SIZE, height: INGREDIENT_BADGE_SIZE, borderRadius: INGREDIENT_BADGE_SIZE / 2,
     paddingHorizontal: 2, justifyContent: 'center',
   },
-  icon: { includeFontPadding: false, flexShrink: 0 },
+  icon: { flexShrink: 0 },
   count: { flexShrink: 1, fontSize: 11, textAlignVertical: 'center', fontWeight: '700', fontVariant: ['tabular-nums'], includeFontPadding: false },
 });

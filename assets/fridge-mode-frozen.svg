@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- 냉동 안내 그림의 눈송이 형태를 도면과 범례에 사용한다. -->
+  <path transform="translate(12 12)" d="M0-9V9M-8-4.5 8 4.5M-8 4.5 8-4.5M-3-6 0-4l3-2M-3 6 0 4l3 2M-7 0l3-2v-3M7 0 4 2v3M-7 0l3 2v3M7 0 4-2v-3"
+    fill="none" stroke="#000" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" />
+</svg>
