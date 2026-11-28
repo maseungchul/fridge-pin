@@ -12,6 +12,7 @@ import type { ComponentRef, RefObject } from 'react';
 import { MaskedView } from '@expo/ui/community/masked-view';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { ActivityIndicator, Animated, AppState, BackHandler, Easing, ScrollView, StyleSheet, Text, View, useAnimatedValue, useWindowDimensions } from 'react-native';
+import { Image } from 'expo-image';
 import { useSQLiteContext } from 'expo-sqlite';
 import Storage from 'expo-sqlite/kv-store';
 import { spacing, createThemedStyles } from '@/theme/tokens';
@@ -53,12 +54,20 @@ type HomeScreenProps = CompositeScreenProps<
 
 const EMPTY_PREVIEW_ROWS = [{ id: 'top', doorCount: 1 }, { id: 'bottom', doorCount: 1 }];
 const HOME_MENU_SIZE = 40;
-const HOME_TOOL_ICON_SIZE = 22;
 const HOME_TOOL_LABEL_SIZE = 14;
 const HOME_TOOLBAR_EDGE_SPACE = 8;
 const HOME_TOOLBAR_TOGGLE_OVERLAP = HOME_MENU_SIZE / 2 + spacing.xs;
 const UNSEEN_CONSUMED_STORAGE_KEY = 'ingredients.hasUnseenConsumed';
 const EMPTY_INGREDIENT_DRAFT: IngredientDraft = { name: '', quantity: '', memo: '', expirationDate: null };
+
+// 하단 탭과 같은 방식으로 SVG에 테마 색상을 입힌다.
+const homeToolbarIcons = {
+  unassigned: require('../../assets/home-toolbar-unassigned.svg'),
+  queue: require('../../assets/home-toolbar-queue.svg'),
+  consumed: require('../../assets/home-toolbar-consumed.svg'),
+  legend: require('../../assets/home-toolbar-legend.svg'),
+  toggle: require('../../assets/home-toolbar-toggle.svg'),
+};
 
 export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngredientFormResult, takeIngredientSearchResult,
   clearDeletedRefrigeratorRef }: HomeScreenProps) {
@@ -399,7 +408,8 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                           onPress={() => { if (canUseToolbar && !toolbarChanging.current) setOpenLocationList('unassigned'); }}
                           style={[styles.action, styles.homeAction]} hitSlop={4}>
                           <View>
-                            <MaterialDesignIcons name="map-marker-alert-outline" size={18} color={colors.chilled} accessible={false} />
+                            <Image source={homeToolbarIcons.unassigned} style={styles.homeActionIcon}
+                              contentFit="contain" tintColor={colors.chilled} accessible={false} />
                             {unassignedCount > 0 && isToolbarExpanded ? <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" /> : null}
                           </View>
                           <Text style={[styles.label, styles.homeLabel]} numberOfLines={1}>{t('unassigned.label')}</Text>
@@ -410,7 +420,8 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                         onPress={() => { if (canUseToolbar && !toolbarChanging.current) setOpenLocationList('queue'); }}
                         style={[styles.action, styles.homeAction]} hitSlop={4}>
                         <View>
-                          <MaterialDesignIcons name="swap-horizontal" size={18} color={colors.chilled} accessible={false} />
+                          <Image source={homeToolbarIcons.queue} style={styles.homeActionIcon}
+                            contentFit="contain" tintColor={colors.chilled} accessible={false} />
                           {hasQueuedIngredients && isToolbarExpanded ? <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" /> : null}
                         </View>
                         <Text style={[styles.label, styles.homeLabel]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('queue.pending')}</Text>
@@ -421,7 +432,8 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                         onPress={() => { if (canUseToolbar && !toolbarChanging.current) setIsConsumedOpen(true); }}
                         style={[styles.action, styles.homeAction]} hitSlop={4}>
                         <View>
-                          <MaterialDesignIcons name="sticker-check-outline" size={18} color={colors.chilled} accessible={false} />
+                          <Image source={homeToolbarIcons.consumed} style={styles.homeActionIcon}
+                            contentFit="contain" tintColor={colors.chilled} accessible={false} />
                           {hasUnseenConsumed && isToolbarExpanded ? <View style={styles.toolbarDot} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" /> : null}
                         </View>
                         <Text style={[styles.label, styles.homeLabel]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{t('consumed.title')}</Text>
@@ -430,7 +442,8 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                         accessibilityState={{ disabled: !canUseToolbar }} disabled={false} interactionBlocked={!canUseToolbar}
                         onPress={() => { if (canUseToolbar && !toolbarChanging.current) setIsLegendOpen(true); }}
                         style={[styles.action, styles.homeAction]} hitSlop={4}>
-                        <MaterialDesignIcons name="map-legend" size={18} color={colors.chilled} accessible={false} />
+                        <Image source={homeToolbarIcons.legend} style={styles.homeActionIcon}
+                          contentFit="contain" tintColor={colors.chilled} accessible={false} />
                         <Text style={[styles.label, styles.homeLabel]} numberOfLines={1}>{t('legend.label')}</Text>
                       </FeedbackPressable>
                     </Animated.ScrollView>
@@ -446,8 +459,8 @@ export function HomeScreen({ navigation, onTabInteractionBlockedChange, takeIngr
                   disabled={false} interactionBlocked={isToolbarBlocked} onPress={toggleToolbar} feedback="none"
                   style={styles.toolbarToggle} hitSlop={4}>
                   {({ pressed }) => <>
-                    <MaterialDesignIcons name={isToolbarExpanded ? 'transfer-right' : 'transfer-left'} size={HOME_TOOL_ICON_SIZE}
-                      color={pressed ? colors.sage : colors.chilled} accessible={false} />
+                    <Image source={homeToolbarIcons.toggle} style={[styles.toolbarToggleIcon, isToolbarExpanded && styles.toolbarToggleIconReversed]}
+                      contentFit="contain" tintColor={pressed ? colors.sage : colors.chilled} accessible={false} />
                     {!isToolbarExpanded && (unassignedCount > 0 || hasQueuedIngredients || hasUnseenConsumed) ? (
                       <View style={styles.toolbarDotOnToggle} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
                     ) : null}
@@ -587,6 +600,9 @@ const getStyles = createThemedStyles(({ colors, fridgeDoorColors }, mode) => Sty
   homeAction: { flex: 0, flexShrink: 0, maxWidth: undefined, minHeight: HOME_MENU_SIZE, flexDirection: 'row', gap: spacing.xs,
     paddingHorizontal: spacing.sm, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border,
     backgroundColor: colors.navigationBackground },
+  homeActionIcon: { width: 22, height: 22 },
+  toolbarToggleIcon: { width: 22, height: 22 },
+  toolbarToggleIconReversed: { transform: [{ scaleX: -1 }] },
   homeLabel: { color: mode === 'dark' ? '#C8CECB' : colors.text, fontSize: HOME_TOOL_LABEL_SIZE },
   toolbarDot: { position: 'absolute', top: -5, right: -3, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.chilled },
   toolbarDotOnToggle: { position: 'absolute', top: 7, right: 7, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.chilled },

@@ -62,6 +62,7 @@ function createFixture() {
       SafeAreaView: 'SafeAreaView', useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
     },
     expo: {},
+    'expo-image': { Image: 'Image' },
     'expo-sqlite': { useSQLiteContext: () => null },
     'expo-sqlite/kv-store': { async getItemAsync() { return null; } },
     '@/db/refrigeratorRepository': { async getRefrigerator() { return refrigerator; } },
