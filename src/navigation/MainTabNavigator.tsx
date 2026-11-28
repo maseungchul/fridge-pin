@@ -141,7 +141,7 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
       tabBarIconSize: 28,
       tabBarIconStyle: styles.icon,
       tabBarIcon: ({ focused, color, size }) => (
-        <View style={[styles.icon, (focused || pressedTab === route.name) && styles.selectedIcon]} pointerEvents="none">
+        <View style={[styles.icon, focused && styles.selectedIcon]} pointerEvents="none">
           <Image source={tabIcons[route.name]} style={[{ width: size, height: size }, route.name === 'Shopping' && styles.shoppingIcon]}
             contentFit="contain" tintColor={pressedTab === route.name ? colors.chilled : color} accessible={false} />
         </View>
@@ -161,7 +161,7 @@ export function MainTabNavigator({ takeIngredientFormResult, takeIngredientSearc
       tabBarItemStyle: styles.item,
       sceneStyle: styles.scene,
       tabBarStyle: [styles.tabBar, {
-        height: 50 + insets.bottom,
+        height: 58 + insets.bottom,
         paddingBottom: insets.bottom,
         paddingLeft: spacing.sm + insets.left,
         paddingRight: spacing.sm + insets.right,
@@ -220,7 +220,7 @@ const getStyles = createThemedStyles(({ colors }) => StyleSheet.create({
     elevation: 0, shadowOpacity: 0,
   },
   item: { marginHorizontal: spacing.xs },
-  button: { minHeight: 44, borderRadius: 18, paddingTop: 8, paddingBottom: 0, justifyContent: 'center' },
+  button: { minHeight: 44, borderRadius: 18, paddingTop: 4, paddingBottom: 4, justifyContent: 'center' },
   // 선택 배경 전체를 아이콘 슬롯에 넣어 아래 라벨과 겹치지 않게 한다.
   icon: { width: 50, height: 34, alignItems: 'center', justifyContent: 'center' },
   shoppingIcon: { width: 32, height: 32, transform: [{ translateY: -1 }] },

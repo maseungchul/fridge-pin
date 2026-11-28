@@ -574,7 +574,7 @@ const getStyles = createThemedStyles(({ colors, fridgeDoorColors }, mode) => Sty
   },
   scene: { flex: 1, minHeight: 0, overflow: 'hidden' },
   toolbarOverlay: { ...StyleSheet.absoluteFill, zIndex: 30 },
-  toolbarAnchor: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: HOME_TOOLBAR_EDGE_SPACE, paddingBottom: 4 },
+  toolbarAnchor: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: HOME_TOOLBAR_EDGE_SPACE },
   toolbarRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   toolbarToolsViewport: { flex: 1, minWidth: 0, overflow: 'hidden', marginRight: -HOME_TOOLBAR_TOGGLE_OVERLAP },
   toolbarMask: { alignSelf: 'flex-end', maxWidth: '100%' },
