@@ -8,6 +8,7 @@ import type { ComponentProps } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import type { PressableProps } from 'react-native';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
+import { Image } from 'expo-image';
 import { createThemedStyles } from '@/theme/tokens';
 import { useAppTheme } from '@/theme/ThemeProvider';
 
@@ -39,15 +40,21 @@ export function FeedbackPressable({ feedback = 'default', iconFeedback = false, 
         ]}>
         {iconFeedback ? state => {
           const content = typeof children === 'function' ? children(state) : children;
-          return Children.map(content, child =>
-            isValidElement<ComponentProps<typeof MaterialDesignIcons>>(child) && child.type === MaterialDesignIcons
-              ? cloneElement(child, {
+          const pressedColor = !isDisabled && (state.pressed || hovered)
+            ? feedback === 'danger' ? colors.errorPressed : colors.iconPressed
+            : undefined;
+          return Children.map(content, child => {
+            if (isValidElement<ComponentProps<typeof MaterialDesignIcons>>(child) && child.type === MaterialDesignIcons) {
+              return cloneElement(child, {
                 pointerEvents: 'none',
-                color: !isDisabled && (state.pressed || hovered)
-                  ? feedback === 'danger' ? colors.errorPressed : colors.iconPressed
-                  : child.props.color,
-              })
-              : child);
+                color: pressedColor ?? child.props.color,
+              });
+            }
+            if (isValidElement<ComponentProps<typeof Image>>(child) && child.type === Image) {
+              return cloneElement(child, { tintColor: pressedColor ?? child.props.tintColor });
+            }
+            return child;
+          });
         } : children}
       </Pressable>
     </>
